@@ -259,6 +259,8 @@ function ns.DebugTalents()
         local ok, n = pcall(m.fn)
         ns.Print(format("%s: %s", m.name, ok and tostring(n) or ("error: " .. tostring(n))))
     end
+    local b = ns.UI and ns.UI.TalentButton and ns.UI.TalentButton()
+    ns.Print("Talent button found: " .. (b and (b:GetName() or "yes") or "no"))
 end
 
 local lastTalentMsg
@@ -266,10 +268,12 @@ function ns.CheckTalents()
     local n = (ns.db.remindTalents and ns.UnspentTalents()) or 0
     if n > 0 and n ~= lastTalentMsg then
         ns.Print(format("You have %d unspent talent point(s). Open your talents to spend them.", n))
-        ns.Alert(format("%d unspent talent point%s", n, n == 1 and "" or "s"))
     end
     lastTalentMsg = n
-    if ns.UI then ns.UI.Refresh() end
+    if ns.UI then
+        ns.UI.TalentBubble(n)
+        ns.UI.Refresh()
+    end
 end
 -- Events
 local f = CreateFrame("Frame")

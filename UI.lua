@@ -346,11 +346,12 @@ end
 
 -- Talent bubble over the talent button --------------------------------------------
 local function TalentButton()
-    for _, n in ipairs({ "PlayerSpellsMicroButton", "TalentMicroButton" }) do
+    for _, n in ipairs({ "TalentMicroButton", "PlayerSpellsMicroButton", "TalentsMicroButton", "ClassTalentMicroButton" }) do
         local b = _G[n]
         if b and b.IsVisible and b:IsVisible() then return b end
     end
 end
+UI.TalentButton = TalentButton
 
 local function OpenTalents()
     local b = TalentButton()
