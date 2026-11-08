@@ -117,13 +117,6 @@ local function OnCast(spellID)
     end
 end
 
-local ev = CreateFrame("Frame")
-ev:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
-ev:SetScript("OnEvent", function(_, _, _, _, spellID)
-    if ns.db and type(spellID) == "number" then
-        C_Timer.After(0.3, function() OnCast(spellID) end)
-    end
-end)
 
 -- Every recipe you have the skill for but haven't learned, per profession,
 -- cheapest first: { name = prof, list = { {name, rank, cost}... }, cost = total }
@@ -204,3 +197,13 @@ function P.Check(level)
     end
     if ns.UI then ns.UI.Refresh() end
 end
+
+-- Listen for crafts/gathers last, and safely: if the client refuses this event,
+-- everything above still works.
+local ev = CreateFrame("Frame")
+local ok = pcall(ev.RegisterUnitEvent, ev, "UNIT_SPELLCAST_SUCCEEDED", "player")
+if not ok then pcall(ev.RegisterEvent, ev, "UNIT_SPELLCAST_SUCCEEDED") end
+ev:SetScript("OnEvent", function(_, _, unit, _, spellID)
+    if unit ~= "player" or not ns.db or type(spellID) ~= "number" then return end
+    C_Timer.After(0.3, function() pcall(OnCast, spellID) end)
+end)
