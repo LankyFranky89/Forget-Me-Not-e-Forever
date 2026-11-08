@@ -336,6 +336,10 @@ f:SetScript("OnEvent", function(_, event, arg1)
                 if ns.db.remindProf then ns.Prof.Check() end
                 ns.CheckTalents()
                 ns.Quests.Check()
+                -- re-show the talent bubble 15 minutes after it was closed
+                C_Timer.NewTicker(60, function()
+                    if not InCombatLockdown() then ns.CheckTalents() end
+                end)
             end
         end)
 
@@ -345,6 +349,7 @@ f:SetScript("OnEvent", function(_, event, arg1)
         if ns.db.remindProf then
             C_Timer.After(1, function() ns.Prof.Check(level) end)
         end
+        if ns.UI then ns.UI.talentDismissedAt = nil end  -- a new level shows it right away
         C_Timer.After(1.5, function() ns.CheckTalents() end)
         C_Timer.After(2, function() ns.Quests.Check(level) end)
 

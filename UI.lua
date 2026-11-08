@@ -403,7 +403,7 @@ local function CreateBubble()
     close:SetSize(22, 22)
     close:SetPoint("TOPRIGHT", -2, -2)
     close:SetScript("OnClick", function()
-        ns.char.talentDismissedLevel = UnitLevel("player")
+        UI.talentDismissedAt = GetTime()  -- comes back after 15 minutes
         UI.TalentBubble(0)
     end)
 
@@ -439,7 +439,8 @@ end
 function UI.TalentBubble(n)
     if InCombatLockdown() then return end
     local f = UI.bubble
-    if not n or n <= 0 or ns.char.talentDismissedLevel == UnitLevel("player") then
+    local snoozed = UI.talentDismissedAt and (GetTime() - UI.talentDismissedAt) < 900
+    if not n or n <= 0 or snoozed then
         if f then f:Hide(); f.glow.anim:Stop(); f.glow:Hide() end
         return
     end
