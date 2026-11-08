@@ -165,22 +165,6 @@ local function CreateList()
     f:SetClampedToScreen(true)
     f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", function(self) if N.editing then self:StartMoving() end end)
-    f:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        if N.editing then
-            local right, bottom = self:GetRight(), self:GetBottom()
-            local sc = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
-            ns.db.listPos = { x = right * sc - UIParent:GetWidth(), y = bottom * sc }
-            N.PlaceList()
-        end
-    end)
-    f:SetScript("OnMouseUp", function(_, button)
-        if N.editing and button == "RightButton" then
-            ns.db.listPos = nil
-            N.PlaceList()
-        end
-    end)
 
     -- header like the tracker's "Quests" header: title + collapse button, click to toggle
     local head = CreateFrame("Button", nil, f)
@@ -244,18 +228,7 @@ local function CreateList()
         f.rows[i] = r
     end
 
-    -- Edit Mode highlight
-    f.edit = CreateFrame("Frame", nil, f)
-    f.edit:SetAllPoints()
-    f.edit:SetFrameLevel(f:GetFrameLevel() + 20)
-    local hl = f.edit:CreateTexture(nil, "OVERLAY")
-    hl:SetAllPoints()
-    hl:SetColorTexture(0.25, 0.55, 1, 0.25)
-    local lbl = f.edit:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    lbl:SetPoint("CENTER")
-    lbl:SetText("Squire\n|cffaaaaaaDrag to move · right-click to reset|r")
-    f.edit:EnableMouse(false)
-    f.edit:Hide()
+    N.CreateSelection(f)
 
     N.frame = f
     N.PlaceList()
@@ -267,7 +240,7 @@ function N.PlaceList()
     local f = N.frame
     if not f then return end
     f:ClearAllPoints()
-    local pos = ns.db.listPos
+    local pos = N.GetPos()
     if pos then
         f:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", pos.x, pos.y)
     elseif ObjectiveTrackerFrame and ObjectiveTrackerFrame:GetTop() then
@@ -277,20 +250,121 @@ function N.PlaceList()
     end
 end
 
+-- Positions are saved per Edit Mode layout, like the game's own frames
+local function LayoutName()
+    if C_EditMode and C_EditMode.GetLayouts then
+        local ok, info = pcall(C_EditMode.GetLayouts)
+        if ok and info and info.layouts and info.activeLayout then
+            -- the first two layouts are the game's presets (Modern, Classic)
+            local idx = info.activeLayout
+            local preset = (EditModePresetLayoutManager and EditModePresetLayoutManager.GetCopyOfPresetLayouts
+                and EditModePresetLayoutManager:GetCopyOfPresetLayouts()) or {}
+            local all = {}
+            for _, l in ipairs(preset) do all[#all + 1] = l end
+            for _, l in ipairs(info.layouts) do all[#all + 1] = l end
+            local l = all[idx]
+            if l and l.layoutName then return l.layoutName end
+            return "layout" .. idx
+        end
+    end
+    return "default"
+end
+
+function N.GetPos()
+    ns.db.listPosByLayout = ns.db.listPosByLayout or {}
+    return ns.db.listPosByLayout[LayoutName()] or ns.db.listPos
+end
+
+function N.SavePos(pos)
+    ns.db.listPosByLayout = ns.db.listPosByLayout or {}
+    ns.db.listPosByLayout[LayoutName()] = pos
+    if not pos then ns.db.listPos = nil end
+end
+
+-- Edit Mode selection box: uses the game's own template, so it looks and behaves
+-- like the default UI's frames (blue when Edit Mode is open, yellow when selected).
+function N.CreateSelection(f)
+    local ok, sel = pcall(CreateFrame, "Frame", nil, f, "EditModeSystemSelectionTemplate")
+    if not ok or not sel then
+        -- fallback: plain blue box
+        sel = CreateFrame("Frame", nil, f)
+        local hl = sel:CreateTexture(nil, "OVERLAY")
+        hl:SetAllPoints()
+        hl:SetColorTexture(0.25, 0.55, 1, 0.3)
+        sel.Label = sel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        sel.Label:SetPoint("CENTER")
+        sel.plain = true
+    end
+    sel:SetAllPoints()
+    sel:SetFrameLevel(f:GetFrameLevel() + 20)
+    if sel.Label then sel.Label:SetText("Squire") end
+    sel:EnableMouse(true)
+    sel:RegisterForDrag("LeftButton")
+    sel:SetScript("OnMouseDown", function(self, button)
+        if button == "RightButton" then
+            N.SavePos(nil)
+            N.PlaceList()
+            return
+        end
+        if not self.plain and self.ShowSelected then pcall(self.ShowSelected, self) end
+        N.selected = true
+        if not self.plain and EditModeManagerFrame and EditModeManagerFrame.ClearSelectedSystem then
+            pcall(EditModeManagerFrame.ClearSelectedSystem, EditModeManagerFrame)
+        end
+    end)
+    sel:SetScript("OnDragStart", function() f:StartMoving() end)
+    sel:SetScript("OnDragStop", function()
+        f:StopMovingOrSizing()
+        local sc = f:GetEffectiveScale() / UIParent:GetEffectiveScale()
+        N.SavePos({ x = f:GetRight() * sc - UIParent:GetWidth(), y = f:GetBottom() * sc })
+        N.PlaceList()
+    end)
+    sel:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:AddLine("Squire", 1, 0.82, 0)
+        GameTooltip:AddLine("Drag to move · right-click to reset", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    sel:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    sel:Hide()
+    f.edit = sel
+
+    -- selecting one of the game's frames deselects ours
+    if EditModeManagerFrame and EditModeManagerFrame.SelectSystem then
+        hooksecurefunc(EditModeManagerFrame, "SelectSystem", function()
+            if N.selected and not sel.plain and sel.ShowHighlighted then
+                N.selected = false
+                pcall(sel.ShowHighlighted, sel)
+            end
+        end)
+    end
+end
+
 -- Hook into the game's own Edit Mode
 local function EnterEdit()
     N.editing = true
     local f = N.frame or CreateList()
     N.ShowList(true, true)
     f.edit:Show()
+    if not f.edit.plain and f.edit.ShowHighlighted then pcall(f.edit.ShowHighlighted, f.edit) end
+    N.selected = false
 end
 
 local function ExitEdit()
     N.editing = false
+    N.selected = false
     if not N.frame then return end
     N.frame.edit:Hide()
     N.ShowList(false)
 end
+
+-- switching Edit Mode layout moves the list to that layout's spot
+pcall(function()
+    EventRegistry:RegisterCallback("EditMode.SavedLayouts", function() N.PlaceList() end, N)
+end)
+local lev = CreateFrame("Frame")
+pcall(lev.RegisterEvent, lev, "EDIT_MODE_LAYOUTS_UPDATED")
+lev:SetScript("OnEvent", function() C_Timer.After(0.2, N.PlaceList) end)
 
 function N.HookEditMode()
     if EventRegistry and EventRegistry.RegisterCallback then

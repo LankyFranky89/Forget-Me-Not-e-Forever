@@ -358,7 +358,7 @@ SlashCmdList.SQUIRE = function(input)
     elseif cmd == "recipes" then
         ns.Nearby.ShowRecipes(nil)
     elseif cmd == "resetpos" then
-        ns.db.listPos = nil
+        ns.Nearby.SavePos(nil)
         ns.Nearby.PlaceList()
         ns.Print("To-do list moved back above the quest tracker.")
     elseif cmd == "dump" then
