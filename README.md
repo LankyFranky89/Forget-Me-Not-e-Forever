@@ -18,7 +18,7 @@ Talk to your class trainer once. The addon reads every spell, rank, level and co
 - Any capital city (Stormwind, Ironforge, Darnassus, Orgrimmar, Thunder Bluff, Undercity), or within 40 yards of a trainer you need: a to-do list with a Waypoint button for each trainer.
 - Unspent talent points: reminder after level-up and in the panel.
 - New profession recipes: talk to a profession trainer once; it tells you when your skill is high enough for new recipes there.
-- Capped profession: every craft or gather while you are at the cap (e.g. 75/75) warns you that you get no skill-ups and what to train.
+- Capped profession (e.g. 75/75): shows in the to-do list when you enter a capital or get close to the trainer. Optional: a warning on every craft or gather (off by default, in Options).
 - Class quests: Paladin (Redemption at 12, Verigan's Fist / Sense Undead at 20, mount at 40, Alliance) and Shaman totem quests (Earth 4, Fire 10, Water 20, Air 30). Skip one with /squire skip <quest name>.
 - Minimap button: left-click opens the panel, right-click opens the to-do list, drag to move.
 

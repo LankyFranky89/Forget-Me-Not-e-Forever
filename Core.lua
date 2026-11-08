@@ -9,7 +9,7 @@ local DEFAULTS = {
     remindCity    = true,   -- show the to-do list when entering a city below
     remindNear    = true,   -- show the to-do list when close to a trainer you need
     remindProf    = true,   -- profession reminders
-    remindCapCraft = true,  -- warn on every craft/gather while a profession is capped
+    remindCapCraft = false, -- warn on every craft/gather while a profession is capped (off: to-do list only)
     remindQuests  = true,   -- class quests
     remindTalents = true,   -- unspent talent points
     remindRecipes = true,   -- new profession recipes at the trainer
@@ -255,6 +255,11 @@ f:SetScript("OnEvent", function(_, event, arg1)
         ApplyDefaults(SquireDB, DEFAULTS)
         ApplyDefaults(SquireCharDB, CHAR_DEFAULTS)
         ns.db, ns.char = SquireDB, SquireCharDB
+        -- 0.8.4: per-craft cap warning is now off by default
+        if not ns.db.capCraftDefaultOff then
+            ns.db.remindCapCraft = false
+            ns.db.capCraftDefaultOff = true
+        end
         -- 0.1.0 could store other classes' spells: clear them once
         if (ns.char.dataVersion or 1) < 3 then
             wipe(ns.char.services)
