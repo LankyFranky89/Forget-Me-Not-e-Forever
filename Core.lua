@@ -206,16 +206,59 @@ function ns.SaveSummary()
 end
 
 -- Unspent talent points, or nil if this client can't tell
+-- Each way of reading unspent talent points; the first that works is used.
+local TALENT_METHODS = {
+    { name = "UnitCharacterPoints", fn = function()
+        if UnitCharacterPoints then return UnitCharacterPoints("player") end
+    end },
+    { name = "GetUnspentTalentPoints", fn = function()
+        if GetUnspentTalentPoints then return GetUnspentTalentPoints() end
+    end },
+    { name = "C_Traits (modern talents)", fn = function()
+        if not (C_ClassTalents and C_ClassTalents.GetActiveConfigID and C_Traits) then return end
+        local configID = C_ClassTalents.GetActiveConfigID()
+        if not configID then return end
+        local info = C_Traits.GetConfigInfo(configID)
+        local treeID = info and info.treeIDs and info.treeIDs[1]
+        if not treeID then return end
+        local currencies = C_Traits.GetTreeCurrencyInfo(configID, treeID, false)
+        if type(currencies) ~= "table" then return end
+        local total = 0
+        for _, c in ipairs(currencies) do
+            if type(c.quantity) == "number" then total = total + c.quantity end
+        end
+        return total
+    end },
+    { name = "Talent tabs (level - 9 - spent)", fn = function()
+        if not (GetNumTalentTabs and GetNumTalents and GetTalentInfo) then return end
+        local level = UnitLevel("player")
+        if level < 10 then return 0 end
+        local spent = 0
+        for tab = 1, GetNumTalentTabs() do
+            for i = 1, GetNumTalents(tab) do
+                local r = { GetTalentInfo(tab, i) }
+                -- current rank is the 5th value in the classic API
+                if type(r[5]) == "number" then spent = spent + r[5] end
+            end
+        end
+        return math.max(0, level - 9 - spent)
+    end },
+}
+
 function ns.UnspentTalents()
-    if UnitCharacterPoints then
-        local ok, n = pcall(UnitCharacterPoints, "player")
-        if ok and type(n) == "number" then return n end
-    end
-    if GetUnspentTalentPoints then
-        local ok, n = pcall(GetUnspentTalentPoints)
-        if ok and type(n) == "number" then return n end
+    for _, m in ipairs(TALENT_METHODS) do
+        local ok, n = pcall(m.fn)
+        if ok and type(n) == "number" then return n, m.name end
     end
     return nil
+end
+
+-- /squire talents: shows what each method returns
+function ns.DebugTalents()
+    for _, m in ipairs(TALENT_METHODS) do
+        local ok, n = pcall(m.fn)
+        ns.Print(format("%s: %s", m.name, ok and tostring(n) or ("error: " .. tostring(n))))
+    end
 end
 
 local lastTalentMsg
@@ -240,6 +283,8 @@ f:RegisterEvent("PLAYER_LOGIN")
 f:RegisterEvent("PLAYER_LEVEL_UP")
 f:RegisterEvent("SKILL_LINES_CHANGED")
 pcall(f.RegisterEvent, f, "CHARACTER_POINTS_CHANGED")
+pcall(f.RegisterEvent, f, "PLAYER_TALENT_UPDATE")
+pcall(f.RegisterEvent, f, "TRAIT_CONFIG_UPDATED")
 f:RegisterEvent("PLAYER_REGEN_ENABLED")
 f:RegisterEvent("TRAINER_SHOW")
 f:RegisterEvent("TRAINER_UPDATE")
@@ -308,7 +353,7 @@ f:SetScript("OnEvent", function(_, event, arg1)
     elseif event == "PLAYER_REGEN_ENABLED" then
         ns.CheckTalents()  -- the bubble waits until combat ends
 
-    elseif event == "CHARACTER_POINTS_CHANGED" then
+    elseif event == "CHARACTER_POINTS_CHANGED" or event == "PLAYER_TALENT_UPDATE" or event == "TRAIT_CONFIG_UPDATED" then
         C_Timer.After(0.5, function() ns.CheckTalents() end)
 
     elseif event == "SKILL_LINES_CHANGED" then
@@ -356,6 +401,9 @@ SlashCmdList.SQUIRE = function(input)
         ns.UI.Refresh()
     elseif cmd == "recipes" then
         ns.Nearby.ShowRecipes(nil)
+    elseif cmd == "talents" then
+        ns.DebugTalents()
+        ns.CheckTalents()
     elseif cmd == "dump" then
         ns.Trainer.Dump()
     elseif cmd == "alts" then
