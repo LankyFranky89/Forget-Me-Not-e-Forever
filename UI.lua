@@ -45,7 +45,13 @@ local function CreateMinimapButton()
     end)
     b:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
     b:SetScript("OnClick", function(_, button)
-        if button == "RightButton" then ns.Nearby.ShowList(true) else UI.TogglePanel() end
+        if button == "RightButton" then
+            ns.Nearby.ShowList(true)
+        elseif IsShiftKeyDown() then
+            ns.Nearby.ShowRecipes(nil)
+        else
+            UI.TogglePanel()
+        end
     end)
     b:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
@@ -62,6 +68,7 @@ local function CreateMinimapButton()
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Left-click: open panel", 0.7, 0.7, 0.7)
         GameTooltip:AddLine("Right-click: to-do list", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Shift-click: learnable recipes", 0.7, 0.7, 0.7)
         GameTooltip:AddLine("Drag: move button", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
@@ -102,6 +109,12 @@ local function CreatePanel()
     opt:SetPoint("BOTTOMRIGHT", -12, 12)
     opt:SetText("Options")
     opt:SetScript("OnClick", function() UI.OpenOptions() end)
+
+    local rec = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    rec:SetSize(110, 22)
+    rec:SetPoint("BOTTOMLEFT", 12, 12)
+    rec:SetText("Recipes")
+    rec:SetScript("OnClick", function() ns.Nearby.ShowRecipes(nil) end)
 
     local list = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     list:SetSize(110, 22)

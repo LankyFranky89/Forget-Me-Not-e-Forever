@@ -225,15 +225,24 @@ function N.ShowRecipes(prof)
         f.text:SetSpacing(3)
         N.recipeFrame = f
     end
-    local entry
+    -- prof = nil: every profession
+    local entries = {}
     for _, p in ipairs(ns.Prof.RecipeList()) do
-        if p.name == prof then entry = p end
+        if not prof or p.name == prof then entries[#entries + 1] = p end
     end
     local money = GetMoney()
     local lines = {}
-    if not entry then
+    local grand = 0
+    if #entries == 0 then
         lines[1] = "Nothing to learn right now."
-    else
+        lines[2] = "|cffaaaaaaTalk to a profession trainer to update this list.|r"
+    end
+    for _, entry in ipairs(entries) do
+        grand = grand + entry.cost
+        if not prof then
+            if #lines > 0 then lines[#lines + 1] = " " end
+            lines[#lines + 1] = format("|cffffd100%s|r |cffaaaaaa(%s)|r", entry.name, ns.Money(entry.cost))
+        end
         for _, r in ipairs(entry.list) do
             local label = r.name .. ((r.rank and r.rank ~= "") and (" (" .. r.rank .. ")") or "")
             if (r.cost or 0) > money then
@@ -242,13 +251,13 @@ function N.ShowRecipes(prof)
                 lines[#lines + 1] = format("%s – %s", label, ns.Money(r.cost))
             end
         end
-        lines[#lines + 1] = " "
-        lines[#lines + 1] = format("|cffffd100Total:|r %s   |cffffd100You have:|r %s", ns.Money(entry.cost), ns.Money(money))
-        if entry.cost > money then
-            lines[#lines + 1] = "|cffff5555Red = can't afford yet.|r"
-        end
     end
-    f.TitleText:SetText(prof .. " – learnable recipes")
+    if #entries > 0 then
+        lines[#lines + 1] = " "
+        lines[#lines + 1] = format("|cffffd100Total:|r %s   |cffffd100You have:|r %s", ns.Money(grand), ns.Money(money))
+        if grand > money then lines[#lines + 1] = "|cffff5555Red = can't afford yet.|r" end
+    end
+    f.TitleText:SetText((prof or "All professions") .. " – learnable recipes")
     f.text:SetText(table.concat(lines, "\n"))
     f:SetHeight(f.text:GetStringHeight() + 60)
     f:Show()
