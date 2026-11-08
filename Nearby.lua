@@ -325,13 +325,11 @@ function N.ShowRecipes(prof)
             row.text:SetPoint("LEFT", row.icon, "RIGHT", 6, 0)
             row.text:SetPoint("RIGHT", -2, 0)
             local label = d.name .. ((d.rank and d.rank ~= "") and (" (" .. d.rank .. ")") or "")
-            if d.skill and d.skill > 0 then
-                label = format("|cffaaaaaa[%d]|r %s", d.skill, label)
-            end
+            local prefix = (d.skill and d.skill > 0) and format("|cffaaaaaa[%d]|r ", d.skill) or ""
             if (d.cost or 0) > money then
-                row.text:SetText(format("|cffff5555%s – %s|r", label, ns.Money(d.cost)))
+                row.text:SetText(prefix .. format("|cffff5555%s – %s|r", label, ns.Money(d.cost)))
             else
-                row.text:SetText(format("%s – %s", label, ns.Money(d.cost)))
+                row.text:SetText(prefix .. format("%s – %s", label, ns.Money(d.cost)))
             end
             row.data = d
             row:EnableMouse(true)
