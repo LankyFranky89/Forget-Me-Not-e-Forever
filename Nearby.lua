@@ -117,13 +117,23 @@ end
 local function CreateList()
     local f = ns.MakeWindow("SquireListFrame")
     f:SetSize(480, 90)
-    f:SetPoint("TOP", 0, -140)
-    f:SetFrameStrata("HIGH")
+    f:SetFrameStrata("MEDIUM")
     f:SetMovable(true)
+    f:SetClampedToScreen(true)
     f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    -- only movable while the game's Edit Mode is open
+    f:SetScript("OnDragStart", function(self) if N.editing then self:StartMoving() end end)
+    f:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        if N.editing then
+            -- save as bottom-right corner, so the list grows upwards like it does above the tracker
+            local right, bottom = self:GetRight(), self:GetBottom()
+            local s = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
+            ns.db.listPos = { x = right * s - UIParent:GetWidth(), y = bottom * s }
+            N.PlaceList()
+        end
+    end)
     tinsert(UISpecialFrames, "SquireListFrame")  -- Esc closes it
     f.rows = {}
     for i = 1, ROWS do
@@ -159,22 +169,102 @@ local function CreateList()
         hiddenZone[GetRealZoneText()] = true
         f:Hide()
     end)
+    -- collapse / expand button next to the close button
+    f.toggle = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    f.toggle:SetSize(22, 20)
+    f.toggle:SetPoint("TOPRIGHT", -28, -2)
+    f.toggle:SetFrameLevel(f:GetFrameLevel() + 10)
+    f.toggle:SetScript("OnClick", function()
+        ns.db.listCollapsed = not ns.db.listCollapsed
+        N.ShowList(true, f.editOnly)
+    end)
+
+    -- Edit Mode highlight
+    f.edit = CreateFrame("Frame", nil, f)
+    f.edit:SetAllPoints()
+    f.edit:SetFrameLevel(f:GetFrameLevel() + 20)
+    local hl = f.edit:CreateTexture(nil, "OVERLAY")
+    hl:SetAllPoints()
+    hl:SetColorTexture(0.25, 0.55, 1, 0.25)
+    local lbl = f.edit:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+    lbl:SetPoint("CENTER")
+    lbl:SetText("Squire to-do list\n|cffaaaaaaDrag to move · right-click to reset|r")
+    f.edit:EnableMouse(false)
+    f.edit:Hide()
+    f:SetScript("OnMouseUp", function(_, button)
+        if N.editing and button == "RightButton" then
+            ns.db.listPos = nil
+            N.PlaceList()
+        end
+    end)
     N.frame = f
+    N.PlaceList()
     return f
 end
 
+-- Default: just above the quest tracker. After moving in Edit Mode: where you put it.
+function N.PlaceList()
+    local f = N.frame
+    if not f then return end
+    f:ClearAllPoints()
+    local pos = ns.db.listPos
+    if pos then
+        f:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", pos.x, pos.y)
+    elseif ObjectiveTrackerFrame and ObjectiveTrackerFrame:IsShown() and ObjectiveTrackerFrame:GetTop() then
+        f:SetPoint("BOTTOMRIGHT", ObjectiveTrackerFrame, "TOPRIGHT", 0, 6)
+    else
+        f:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -60, -260)
+    end
+end
+
+-- Hook into the game's own Edit Mode
+local function EnterEdit()
+    N.editing = true
+    local f = N.frame or CreateList()
+    if not f:IsShown() then
+        f.editOnly = true
+        N.ShowList(true, true)
+    end
+    f.edit:Show()
+end
+
+local function ExitEdit()
+    N.editing = false
+    local f = N.frame
+    if not f then return end
+    f.edit:Hide()
+    if f.editOnly then
+        f.editOnly = nil
+        f:Hide()
+    end
+end
+
+function N.HookEditMode()
+    if EventRegistry and EventRegistry.RegisterCallback then
+        pcall(EventRegistry.RegisterCallback, EventRegistry, "EditMode.Enter", EnterEdit, N)
+        pcall(EventRegistry.RegisterCallback, EventRegistry, "EditMode.Exit", ExitEdit, N)
+    end
+end
+
 -- forced = opened by the user (/tn list or minimap right-click)
-function N.ShowList(forced)
+function N.ShowList(forced, preview)
     local tasks = N.BuildTasks()
     if #tasks == 0 then
-        if forced then ns.Print("Nothing to train right now.") end
-        if N.frame then N.frame:Hide() end
-        return
+        if preview then
+            tasks = { { title = "Example", detail = "Your to-do list shows here." } }
+        else
+            if forced then ns.Print("Nothing to train right now.") end
+            if N.frame and not N.editing then N.frame:Hide() end
+            return
+        end
     end
     local f = N.frame or CreateList()
     local zone = GetRealZoneText()
-    f.TitleText:SetText(UnitName("player") .. " – to do" .. (zone and zone ~= "" and (" in " .. zone) or ""))
-    local shown = math.min(#tasks, ROWS)
+    local collapsed = ns.db.listCollapsed
+    f.TitleText:SetText(UnitName("player") .. " – to do" .. (zone and zone ~= "" and (" in " .. zone) or "")
+        .. (collapsed and format(" (%d)", #tasks) or ""))
+    f.toggle:SetText(collapsed and "+" or "–")
+    local shown = collapsed and 0 or math.min(#tasks, ROWS)
     for i = 1, ROWS do
         local r, t = f.rows[i], tasks[i]
         if i <= shown then
@@ -200,7 +290,15 @@ function N.ShowList(forced)
             r:Hide()
         end
     end
-    f:SetHeight(30 + shown * 44 + 40)
+    if collapsed then
+        f.hide:Hide()
+        f:SetHeight(30)
+    else
+        f.hide:Show()
+        f:SetHeight(30 + shown * 44 + 40)
+    end
+    if not preview then f.editOnly = nil end
+    N.PlaceList()
     f:Show()
 end
 
@@ -384,5 +482,6 @@ local function Tick()
 end
 
 function N.Init()
+    N.HookEditMode()
     C_Timer.NewTicker(2, Tick)
 end
