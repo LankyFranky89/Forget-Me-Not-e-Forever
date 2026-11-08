@@ -13,7 +13,6 @@ local DEFAULTS = {
     remindQuests  = true,   -- class quests
     remindTalents = true,   -- unspent talent points
     remindRecipes = true,   -- new profession recipes at the trainer
-    trackerSection = true,  -- to-do section above the quest tracker
     showAlts      = true,   -- show other characters' to-do lists in the panel
     chat          = true,   -- chat messages
     alert         = true,   -- big on-screen text (raid-warning style)
@@ -357,10 +356,6 @@ SlashCmdList.SQUIRE = function(input)
         ns.UI.Refresh()
     elseif cmd == "recipes" then
         ns.Nearby.ShowRecipes(nil)
-    elseif cmd == "resetpos" then
-        ns.Nearby.SavePos(nil)
-        ns.Nearby.PlaceList()
-        ns.Print("To-do list moved back above the quest tracker.")
     elseif cmd == "dump" then
         ns.Trainer.Dump()
     elseif cmd == "alts" then

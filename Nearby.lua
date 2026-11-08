@@ -114,314 +114,93 @@ local function SetWaypoint(t)
     ns.Print(format("Waypoint set: %s (%.1f, %.1f)", t.name, t.x * 100, t.y * 100))
 end
 
--- To-do section styled like a quest tracker block -------------------------------
-local LINE_FONT = _G.ObjectiveTrackerLineFont and "ObjectiveTrackerLineFont" or "GameFontHighlight"
-local HEAD_FONT = _G.ObjectiveTrackerHeaderFont and "ObjectiveTrackerHeaderFont" or "GameFontNormalMed2"
-local TITLE_FONT = "GameFontNormal"
-
-local function TrackerWidth()
-    if ObjectiveTrackerFrame and ObjectiveTrackerFrame.GetWidth then
-        local w = ObjectiveTrackerFrame:GetWidth()
-        if w and w > 150 then return w end
-    end
-    return 260
-end
-
-local function RowClick(r, button)
-    local t = r.task
-    if not t then return end
-    if t.recipeProf then
-        N.ShowRecipes(t.recipeProf)
-    elseif t.trainer then
-        SetWaypoint(t.trainer)
-    end
-end
-
-local function RowEnter(r)
-    local t = r.task
-    if not t then return end
-    GameTooltip:SetOwner(r, "ANCHOR_LEFT")
-    GameTooltip:AddLine(t.title, 1, 0.82, 0)
-    GameTooltip:AddLine(t.detail, 1, 1, 1, true)
-    if t.trainer then
-        GameTooltip:AddLine(" ")
-        GameTooltip:AddLine(t.trainer.name .. (t.trainer.zone and (", " .. t.trainer.zone) or ""), 0.7, 0.7, 0.7)
-    end
-    GameTooltip:AddLine(" ")
-    if t.recipeProf then
-        GameTooltip:AddLine("Click: show learnable recipes", 0.5, 0.8, 1)
-    end
-    if t.trainer then
-        GameTooltip:AddLine((t.recipeProf and "Shift-click" or "Click") .. ": set waypoint to trainer", 0.5, 0.8, 1)
-    end
-    GameTooltip:Show()
-end
-
 local function CreateList()
-    local f = CreateFrame("Frame", "SquireListFrame", UIParent)
-    f:SetSize(TrackerWidth(), 30)
-    f:SetFrameStrata("LOW")
+    local f = ns.MakeWindow("SquireListFrame")
+    f:SetSize(480, 90)
+    f:SetPoint("TOP", 0, -140)
+    f:SetFrameStrata("HIGH")
     f:SetMovable(true)
-    f:SetClampedToScreen(true)
     f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")
-
-    -- header like the tracker's "Quests" header: title + collapse button, click to toggle
-    local head = CreateFrame("Button", nil, f)
-    head:SetHeight(24)
-    head:SetPoint("TOPLEFT")
-    head:SetPoint("TOPRIGHT")
-    head:RegisterForClicks("LeftButtonUp")
-    head.bg = head:CreateTexture(nil, "BACKGROUND")
-    head.bg:SetAllPoints()
-    head.bg:SetColorTexture(0, 0, 0, 0.35)
-    head.line = head:CreateTexture(nil, "ARTWORK")
-    head.line:SetHeight(1)
-    head.line:SetPoint("BOTTOMLEFT")
-    head.line:SetPoint("BOTTOMRIGHT")
-    head.line:SetColorTexture(1, 0.82, 0, 0.6)
-    head.text = head:CreateFontString(nil, "OVERLAY", HEAD_FONT)
-    head.text:SetPoint("LEFT", 8, 0)
-    head.text:SetJustifyH("LEFT")
-    head.sign = head:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    head.sign:SetPoint("RIGHT", -8, 0)
-    head:SetScript("OnClick", function()
-        if N.editing then return end
-        ns.db.listCollapsed = not ns.db.listCollapsed
-        N.ShowList(true)
-    end)
-    head:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("Squire", 1, 0.82, 0)
-        GameTooltip:AddLine("Click to " .. (ns.db.listCollapsed and "expand" or "collapse"), 0.7, 0.7, 0.7)
-        GameTooltip:Show()
-    end)
-    head:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    f.head = head
-
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    tinsert(UISpecialFrames, "SquireListFrame")  -- Esc closes it
     f.rows = {}
     for i = 1, ROWS do
-        local r = CreateFrame("Button", nil, f)
-        r:RegisterForClicks("LeftButtonUp")
-        r.title = r:CreateFontString(nil, "OVERLAY", TITLE_FONT)
-        r.title:SetPoint("TOPLEFT", 10, 0)
-        r.title:SetPoint("RIGHT", -6, 0)
+        local r = CreateFrame("Frame", nil, f)
+        r:SetSize(450, 40)
+        r:SetPoint("TOPLEFT", 14, -30 - (i - 1) * 44)
+        r.title = r:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        r.title:SetPoint("TOPLEFT")
+        r.title:SetPoint("RIGHT", -90, 0)
         r.title:SetJustifyH("LEFT")
-        r.title:SetWordWrap(false)
-        r.detail = r:CreateFontString(nil, "OVERLAY", LINE_FONT)
-        r.detail:SetPoint("TOPLEFT", r.title, "BOTTOMLEFT", 10, -2)
-        r.detail:SetPoint("RIGHT", -6, 0)
+        r.detail = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        r.detail:SetPoint("TOPLEFT", r.title, "BOTTOMLEFT", 0, -2)
+        r.detail:SetPoint("RIGHT", -90, 0)
         r.detail:SetJustifyH("LEFT")
-        r.hl = r:CreateTexture(nil, "HIGHLIGHT")
-        r.hl:SetAllPoints()
-        r.hl:SetColorTexture(1, 0.82, 0, 0.08)
-        r:SetScript("OnClick", function(self)
-            if IsShiftKeyDown() and self.task and self.task.trainer then
-                SetWaypoint(self.task.trainer)
-            else
-                RowClick(self)
-            end
-        end)
-        r:SetScript("OnEnter", RowEnter)
-        r:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        r:Hide()
+        r.detail:SetMaxLines(2)
+        r.btn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
+        r.btn:SetSize(84, 22)
+        r.btn:SetPoint("RIGHT")
+        r.btn:SetText("Waypoint")
+        r.btn:SetScript("OnClick", function(b) if b.trainer then SetWaypoint(b.trainer) end end)
+        r.rbtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
+        r.rbtn:SetSize(150, 22)
+        r.rbtn:SetText("Learnable recipes")
+        r.rbtn:SetScript("OnClick", function(b) if b.prof then N.ShowRecipes(b.prof) end end)
+        r.rbtn:Hide()
         f.rows[i] = r
     end
-
-    N.CreateSelection(f)
-
+    f.hide = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    f.hide:SetSize(140, 22)
+    f.hide:SetPoint("BOTTOM", 0, 10)
+    f.hide:SetText("Hide in this zone")
+    f.hide:SetScript("OnClick", function()
+        hiddenZone[GetRealZoneText()] = true
+        f:Hide()
+    end)
     N.frame = f
-    N.PlaceList()
     return f
 end
 
--- Default: directly above the quest tracker, same width. After Edit Mode: where you put it.
-function N.PlaceList()
-    local f = N.frame
-    if not f then return end
-    f:ClearAllPoints()
-    local pos = N.GetPos()
-    if pos then
-        f:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", pos.x, pos.y)
-    elseif ObjectiveTrackerFrame and ObjectiveTrackerFrame:GetTop() then
-        f:SetPoint("BOTTOMRIGHT", ObjectiveTrackerFrame, "TOPRIGHT", 0, 4)
-    else
-        f:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -60, -260)
-    end
-end
-
--- Positions are saved per Edit Mode layout, like the game's own frames
-local function LayoutName()
-    if C_EditMode and C_EditMode.GetLayouts then
-        local ok, info = pcall(C_EditMode.GetLayouts)
-        if ok and info and info.layouts and info.activeLayout then
-            -- the first two layouts are the game's presets (Modern, Classic)
-            local idx = info.activeLayout
-            local preset = (EditModePresetLayoutManager and EditModePresetLayoutManager.GetCopyOfPresetLayouts
-                and EditModePresetLayoutManager:GetCopyOfPresetLayouts()) or {}
-            local all = {}
-            for _, l in ipairs(preset) do all[#all + 1] = l end
-            for _, l in ipairs(info.layouts) do all[#all + 1] = l end
-            local l = all[idx]
-            if l and l.layoutName then return l.layoutName end
-            return "layout" .. idx
-        end
-    end
-    return "default"
-end
-
-function N.GetPos()
-    ns.db.listPosByLayout = ns.db.listPosByLayout or {}
-    return ns.db.listPosByLayout[LayoutName()] or ns.db.listPos
-end
-
-function N.SavePos(pos)
-    ns.db.listPosByLayout = ns.db.listPosByLayout or {}
-    ns.db.listPosByLayout[LayoutName()] = pos
-    if not pos then ns.db.listPos = nil end
-end
-
--- Edit Mode selection box: uses the game's own template, so it looks and behaves
--- like the default UI's frames (blue when Edit Mode is open, yellow when selected).
-function N.CreateSelection(f)
-    local ok, sel = pcall(CreateFrame, "Frame", nil, f, "EditModeSystemSelectionTemplate")
-    if not ok or not sel then
-        -- fallback: plain blue box
-        sel = CreateFrame("Frame", nil, f)
-        local hl = sel:CreateTexture(nil, "OVERLAY")
-        hl:SetAllPoints()
-        hl:SetColorTexture(0.25, 0.55, 1, 0.3)
-        sel.Label = sel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        sel.Label:SetPoint("CENTER")
-        sel.plain = true
-    end
-    sel:SetAllPoints()
-    sel:SetFrameLevel(f:GetFrameLevel() + 20)
-    if sel.Label then sel.Label:SetText("Squire") end
-    sel:EnableMouse(true)
-    sel:RegisterForDrag("LeftButton")
-    sel:SetScript("OnMouseDown", function(self, button)
-        if button == "RightButton" then
-            N.SavePos(nil)
-            N.PlaceList()
-            return
-        end
-        if not self.plain and self.ShowSelected then pcall(self.ShowSelected, self) end
-        N.selected = true
-        if not self.plain and EditModeManagerFrame and EditModeManagerFrame.ClearSelectedSystem then
-            pcall(EditModeManagerFrame.ClearSelectedSystem, EditModeManagerFrame)
-        end
-    end)
-    sel:SetScript("OnDragStart", function() f:StartMoving() end)
-    sel:SetScript("OnDragStop", function()
-        f:StopMovingOrSizing()
-        local sc = f:GetEffectiveScale() / UIParent:GetEffectiveScale()
-        N.SavePos({ x = f:GetRight() * sc - UIParent:GetWidth(), y = f:GetBottom() * sc })
-        N.PlaceList()
-    end)
-    sel:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("Squire", 1, 0.82, 0)
-        GameTooltip:AddLine("Drag to move · right-click to reset", 0.7, 0.7, 0.7)
-        GameTooltip:Show()
-    end)
-    sel:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    sel:Hide()
-    f.edit = sel
-
-    -- selecting one of the game's frames deselects ours
-    if EditModeManagerFrame and EditModeManagerFrame.SelectSystem then
-        hooksecurefunc(EditModeManagerFrame, "SelectSystem", function()
-            if N.selected and not sel.plain and sel.ShowHighlighted then
-                N.selected = false
-                pcall(sel.ShowHighlighted, sel)
-            end
-        end)
-    end
-end
-
--- Hook into the game's own Edit Mode
-local function EnterEdit()
-    N.editing = true
-    local f = N.frame or CreateList()
-    N.ShowList(true, true)
-    f.edit:Show()
-    if not f.edit.plain and f.edit.ShowHighlighted then pcall(f.edit.ShowHighlighted, f.edit) end
-    N.selected = false
-end
-
-local function ExitEdit()
-    N.editing = false
-    N.selected = false
-    if not N.frame then return end
-    N.frame.edit:Hide()
-    N.ShowList(false)
-end
-
--- switching Edit Mode layout moves the list to that layout's spot
-pcall(function()
-    EventRegistry:RegisterCallback("EditMode.SavedLayouts", function() N.PlaceList() end, N)
-end)
-local lev = CreateFrame("Frame")
-pcall(lev.RegisterEvent, lev, "EDIT_MODE_LAYOUTS_UPDATED")
-lev:SetScript("OnEvent", function() C_Timer.After(0.2, N.PlaceList) end)
-
-function N.HookEditMode()
-    if EventRegistry and EventRegistry.RegisterCallback then
-        pcall(EventRegistry.RegisterCallback, EventRegistry, "EditMode.Enter", EnterEdit, N)
-        pcall(EventRegistry.RegisterCallback, EventRegistry, "EditMode.Exit", ExitEdit, N)
-    end
-end
-
--- Draws the section. Always visible while there is something to do.
--- forced: user asked for it; preview: Edit Mode with an example line
-function N.ShowList(forced, preview)
-    if not ns.db then return end
+-- forced = opened by the user (/tn list or minimap right-click)
+function N.ShowList(forced)
     local tasks = N.BuildTasks()
-    if #tasks == 0 and (preview or N.editing) then
-        tasks = { { title = "Example", detail = "Your to-do list shows here." } }
-    end
-    local f = N.frame or (#tasks > 0 and CreateList()) or nil
-    if not f then
+    if #tasks == 0 then
         if forced then ns.Print("Nothing to train right now.") end
+        if N.frame then N.frame:Hide() end
         return
     end
-    if #tasks == 0 or not ns.db.trackerSection then
-        if forced and #tasks == 0 then ns.Print("Nothing to train right now.") end
-        f:Hide()
-        return
-    end
-    if InCombatLockdown() and not f:IsShown() then return end
-
-    f:SetWidth(TrackerWidth())
-    local collapsed = ns.db.listCollapsed and not N.editing
-    f.head.text:SetText(format("Squire – to do (%d)", #tasks))
-    f.head.sign:SetText(collapsed and "+" or "–")
-
-    local y = 26
-    local shown = collapsed and 0 or math.min(#tasks, ROWS)
+    local f = N.frame or CreateList()
+    local zone = GetRealZoneText()
+    f.TitleText:SetText(UnitName("player") .. " – to do" .. (zone and zone ~= "" and (" in " .. zone) or ""))
+    local shown = math.min(#tasks, ROWS)
     for i = 1, ROWS do
-        local r = f.rows[i]
+        local r, t = f.rows[i], tasks[i]
         if i <= shown then
-            local t = tasks[i]
-            r.task = t
-            r.title:SetText(t.title)
+            local tr = t.trainer
+            r.title:SetText(t.title .. (tr and ("  |cffbbbbbb– " .. tr.name .. (tr.zone and (", " .. tr.zone) or "") .. "|r") or ""))
             r.detail:SetText(t.detail)
-            r:ClearAllPoints()
-            r:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -y)
-            r:SetPoint("RIGHT", f, "RIGHT", 0, 0)
-            r:SetWidth(f:GetWidth())
-            local h = r.title:GetStringHeight() + 2 + r.detail:GetStringHeight() + 6
-            r:SetHeight(h)
+            r.btn.trainer = tr
+            if tr then r.btn:Show() else r.btn:Hide() end
+            r.rbtn.prof = t.recipeProf
+            r.rbtn:ClearAllPoints()
+            if t.recipeProf then
+                if tr then r.rbtn:SetPoint("RIGHT", r.btn, "LEFT", -4, 0) else r.rbtn:SetPoint("RIGHT") end
+                r.rbtn:Show()
+                r.title:SetPoint("RIGHT", tr and -244 or -156, 0)
+                r.detail:SetPoint("RIGHT", tr and -244 or -156, 0)
+            else
+                r.rbtn:Hide()
+                r.title:SetPoint("RIGHT", -90, 0)
+                r.detail:SetPoint("RIGHT", -90, 0)
+            end
             r:Show()
-            y = y + h
         else
-            r.task = nil
             r:Hide()
         end
     end
-    f:SetHeight(y + (shown > 0 and 4 or 0))
-    N.PlaceList()
+    f:SetHeight(30 + shown * 44 + 40)
     f:Show()
 end
 
@@ -577,7 +356,7 @@ end
 function N.OnZone()
     if not ns.db or not ns.db.remindCity then return end
     local zone = GetRealZoneText()
-    if zone and (N.CAPITALS[zone] or ns.db.cities[zone]) then
+    if zone and (N.CAPITALS[zone] or ns.db.cities[zone]) and not hiddenZone[zone] then
         N.ShowList(false)
     end
 end
@@ -597,7 +376,7 @@ local function Tick()
             if d and d <= ns.db.nearYards and (not nearNotified[key] or now - nearNotified[key] > 600) then
                 nearNotified[key] = now
                 ns.Print(format("%s is close by (%d yd): %s", t.name, math.floor(d), task.detail))
-                N.ShowList(false)
+                if not hiddenZone[GetRealZoneText()] then N.ShowList(false) end
                 return
             end
         end
@@ -605,11 +384,5 @@ local function Tick()
 end
 
 function N.Init()
-    N.HookEditMode()
     C_Timer.NewTicker(2, Tick)
-    -- keep the tracker section current
-    C_Timer.NewTicker(5, function()
-        if not InCombatLockdown() then N.ShowList(false) end
-    end)
-    C_Timer.After(3, function() N.ShowList(false) end)
 end
