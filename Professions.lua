@@ -138,7 +138,7 @@ function P.RecipeList(level)
                     end
                 end
                 table.sort(list, function(a, b)
-                    if (a.cost or 0) ~= (b.cost or 0) then return (a.cost or 0) < (b.cost or 0) end
+                    if (a.skill or 0) ~= (b.skill or 0) then return (a.skill or 0) < (b.skill or 0) end
                     return a.name < b.name
                 end)
                 if #list > 0 then out[#out + 1] = { name = name, list = list, cost = total } end

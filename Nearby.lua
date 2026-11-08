@@ -236,7 +236,7 @@ local function GetRow(f, i)
     local row = f.rows[i]
     if row then return row end
     row = CreateFrame("Frame", nil, f.content)
-    row:SetSize(330, ROW_H)
+    row:SetSize(410, ROW_H)
     row:EnableMouse(true)
     row.icon = row:CreateTexture(nil, "ARTWORK")
     row.icon:SetSize(16, 16)
@@ -259,7 +259,7 @@ function N.ShowRecipes(prof)
     local f = N.recipeFrame
     if not f then
         f = ns.MakeWindow("SquireRecipeFrame")
-        f:SetSize(370, 200)
+        f:SetSize(450, 200)
         f:SetPoint("CENTER", 0, 60)
         f:SetFrameStrata("DIALOG")
         f:SetMovable(true)
@@ -270,7 +270,7 @@ function N.ShowRecipes(prof)
         tinsert(UISpecialFrames, "SquireRecipeFrame")
         f.content = CreateFrame("Frame", nil, f)
         f.content:SetPoint("TOPLEFT", 16, -32)
-        f.content:SetSize(330, 10)
+        f.content:SetSize(410, 10)
         f.rows = {}
         f.footer = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         f.footer:SetPoint("BOTTOMLEFT", 16, 14)
@@ -325,6 +325,9 @@ function N.ShowRecipes(prof)
             row.text:SetPoint("LEFT", row.icon, "RIGHT", 6, 0)
             row.text:SetPoint("RIGHT", -2, 0)
             local label = d.name .. ((d.rank and d.rank ~= "") and (" (" .. d.rank .. ")") or "")
+            if d.skill and d.skill > 0 then
+                label = format("|cffaaaaaa[%d]|r %s", d.skill, label)
+            end
             if (d.cost or 0) > money then
                 row.text:SetText(format("|cffff5555%s – %s|r", label, ns.Money(d.cost)))
             else
