@@ -13,18 +13,40 @@ local TYPES = { available = true, unavailable = true, used = true, header = true
 local function ServiceInfo(i)
     local r = { GetTrainerServiceInfo(i) }
     local name = r[1]
-    local stype, rank
+    local stype, rank, icon
     for k = 2, 6 do
         local v = r[k]
-        if type(v) == "string" then
-            if TYPES[v] and not stype then
+        if type(v) == "number" and v > 0 and not icon then
+            icon = v  -- texture file ID
+        elseif type(v) == "string" then
+            if v:find("[\\/]") then
+                icon = icon or v  -- texture path
+            elseif TYPES[v] and not stype then
                 stype = v
             elseif not rank and v ~= "" and not TYPES[v] then
                 rank = v
             end
         end
     end
-    return name, rank or "", stype
+    return name, rank or "", stype, icon
+end
+
+-- Extra details kept for tooltips: icon, item link (what a recipe makes), description
+local function Details(i, icon)
+    local link, desc
+    if GetTrainerServiceItemLink then
+        local ok, l = pcall(GetTrainerServiceItemLink, i)
+        if ok and type(l) == "string" then link = l end
+    end
+    if GetTrainerServiceDescription then
+        local ok, d = pcall(GetTrainerServiceDescription, i)
+        if ok and type(d) == "string" and d ~= "" then desc = d end
+    end
+    if not icon and GetTrainerServiceIcon then
+        local ok, ic = pcall(GetTrainerServiceIcon, i)
+        if ok and ic then icon = ic end
+    end
+    return icon, link, desc
 end
 T.ServiceInfo = ServiceInfo
 
@@ -144,15 +166,17 @@ local function Scan()
             ns.char.recipes[prof] = ns.char.recipes[prof] or {}
             local store = ns.char.recipes[prof]
             for i = 1, GetNumTrainerServices() do
-                local name, sub, stype = ServiceInfo(i)
+                local name, sub, stype, icon = ServiceInfo(i)
                 if name and stype and stype ~= "header" then
                     local _, skill = GetTrainerServiceSkillReq(i)
+                    local ic, link, desc = Details(i, icon)
                     store[ServiceKey(i, name, sub or "")] = {
                         name = name, rank = sub or "",
                         skill = tonumber(skill) or 0,
                         level = GetTrainerServiceLevelReq(i) or 0,
                         cost = GetTrainerServiceCost and GetTrainerServiceCost(i) or 0,
                         known = (stype == "used"),
+                        icon = ic, link = link, desc = desc,
                     }
                 end
             end
@@ -160,8 +184,9 @@ local function Scan()
         return
     end
     for i = 1, GetNumTrainerServices() do
-        local name, sub, stype = ServiceInfo(i)
+        local name, sub, stype, icon = ServiceInfo(i)
         if name and stype and stype ~= "header" then
+            local ic, link, desc = Details(i, icon)
             local rank = sub or ""
             local key = ServiceKey(i, name, rank)
             ns.char.services[key] = {
@@ -169,6 +194,7 @@ local function Scan()
                 level = GetTrainerServiceLevelReq(i) or 0,
                 cost = GetTrainerServiceCost and GetTrainerServiceCost(i) or 0,
                 known = (stype == "used"),
+                icon = ic, link = link, desc = desc,
             }
         end
     end

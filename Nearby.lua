@@ -204,12 +204,62 @@ function N.ShowList(forced)
     f:Show()
 end
 
--- Window listing one profession's learnable recipes with prices
+-- "What can I learn?" window: one row per spell/recipe with icon and tooltip.
+-- prof = nil shows class spells and every profession.
+local ROW_H = 20
+local QUESTION = "Interface\\Icons\\INV_Misc_QuestionMark"
+
+local function RowTooltip(row)
+    local d = row.data
+    if not d then return end
+    GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
+    local shown = false
+    if d.link then
+        shown = pcall(GameTooltip.SetHyperlink, GameTooltip, d.link)
+    end
+    if not shown then
+        GameTooltip:ClearLines()
+        GameTooltip:AddLine(d.name .. ((d.rank and d.rank ~= "") and (" (" .. d.rank .. ")") or ""), 1, 0.82, 0)
+        if d.desc then GameTooltip:AddLine(d.desc, 1, 1, 1, true) end
+    end
+    GameTooltip:AddLine(" ")
+    if d.skill and d.skill > 0 then GameTooltip:AddLine("Requires skill " .. d.skill, 0.7, 0.7, 0.7) end
+    if d.level and d.level > 0 then GameTooltip:AddLine("Requires level " .. d.level, 0.7, 0.7, 0.7) end
+    GameTooltip:AddLine("Cost: " .. ns.Money(d.cost), 1, 1, 1)
+    if not d.link and not d.desc then
+        GameTooltip:AddLine("Visit the trainer again to see more details.", 0.6, 0.6, 0.6, true)
+    end
+    GameTooltip:Show()
+end
+
+local function GetRow(f, i)
+    local row = f.rows[i]
+    if row then return row end
+    row = CreateFrame("Frame", nil, f.content)
+    row:SetSize(330, ROW_H)
+    row:EnableMouse(true)
+    row.icon = row:CreateTexture(nil, "ARTWORK")
+    row.icon:SetSize(16, 16)
+    row.icon:SetPoint("LEFT", 0, 0)
+    row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    row.text:SetPoint("LEFT", row.icon, "RIGHT", 6, 0)
+    row.text:SetPoint("RIGHT", -2, 0)
+    row.text:SetJustifyH("LEFT")
+    row.text:SetWordWrap(false)
+    row.hl = row:CreateTexture(nil, "HIGHLIGHT")
+    row.hl:SetAllPoints()
+    row.hl:SetColorTexture(1, 0.82, 0, 0.12)
+    row:SetScript("OnEnter", RowTooltip)
+    row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    f.rows[i] = row
+    return row
+end
+
 function N.ShowRecipes(prof)
     local f = N.recipeFrame
     if not f then
         f = ns.MakeWindow("SquireRecipeFrame")
-        f:SetSize(360, 200)
+        f:SetSize(370, 200)
         f:SetPoint("CENTER", 0, 60)
         f:SetFrameStrata("DIALOG")
         f:SetMovable(true)
@@ -218,64 +268,87 @@ function N.ShowRecipes(prof)
         f:SetScript("OnDragStart", f.StartMoving)
         f:SetScript("OnDragStop", f.StopMovingOrSizing)
         tinsert(UISpecialFrames, "SquireRecipeFrame")
-        f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        f.text:SetPoint("TOPLEFT", 16, -34)
-        f.text:SetWidth(328)
-        f.text:SetJustifyH("LEFT")
-        f.text:SetSpacing(3)
+        f.content = CreateFrame("Frame", nil, f)
+        f.content:SetPoint("TOPLEFT", 16, -32)
+        f.content:SetSize(330, 10)
+        f.rows = {}
+        f.footer = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        f.footer:SetPoint("BOTTOMLEFT", 16, 14)
+        f.footer:SetPoint("RIGHT", -16, 0)
+        f.footer:SetJustifyH("LEFT")
         N.recipeFrame = f
     end
-    -- prof = nil: every profession
-    local entries = {}
-    for _, p in ipairs(ns.Prof.RecipeList()) do
-        if not prof or p.name == prof then entries[#entries + 1] = p end
-    end
+
     local money = GetMoney()
-    local lines = {}
+    local items = {}   -- { header = text } or { data = entry }
     local grand = 0
-    -- the full list (prof = nil) also starts with class spells
     if not prof and ns.HasServiceData() then
         local spells, cost = ns.GetAvailable()
         if #spells > 0 then
             grand = grand + cost
-            lines[#lines + 1] = format("|cffffd100Class trainer|r |cffaaaaaa(%s)|r", ns.Money(cost))
-            for _, s in ipairs(spells) do
-                local label = ns.SpellLabel(s)
-                if (s.cost or 0) > money then
-                    lines[#lines + 1] = format("|cffff5555%s – %s|r", label, ns.Money(s.cost))
-                else
-                    lines[#lines + 1] = format("%s – %s", label, ns.Money(s.cost))
-                end
-            end
+            items[#items + 1] = { header = format("|cffffd100Class trainer|r |cffaaaaaa(%s)|r", ns.Money(cost)) }
+            for _, sp in ipairs(spells) do items[#items + 1] = { data = sp } end
         end
     end
-    if #entries == 0 and #lines == 0 then
-        lines[1] = "Nothing to learn right now."
-        lines[2] = "|cffaaaaaaTalk to your trainers to update this list.|r"
-    end
-    for _, entry in ipairs(entries) do
-        grand = grand + entry.cost
-        if not prof then
-            if #lines > 0 then lines[#lines + 1] = " " end
-            lines[#lines + 1] = format("|cffffd100%s|r |cffaaaaaa(%s)|r", entry.name, ns.Money(entry.cost))
+    for _, entry in ipairs(ns.Prof.RecipeList()) do
+        if not prof or entry.name == prof then
+            grand = grand + entry.cost
+            items[#items + 1] = { header = format("|cffffd100%s|r |cffaaaaaa(%s)|r", entry.name, ns.Money(entry.cost)) }
+            for _, r in ipairs(entry.list) do items[#items + 1] = { data = r } end
         end
-        for _, r in ipairs(entry.list) do
-            local label = r.name .. ((r.rank and r.rank ~= "") and (" (" .. r.rank .. ")") or "")
-            if (r.cost or 0) > money then
-                lines[#lines + 1] = format("|cffff5555%s – %s|r", label, ns.Money(r.cost))
+    end
+
+    local y = 0
+    local maxRows = 30
+    local used = 0
+    for i, it in ipairs(items) do
+        if i > maxRows then break end
+        used = i
+        local row = GetRow(f, i)
+        row:ClearAllPoints()
+        if it.header then
+            if i > 1 then y = y + 6 end
+            row:SetPoint("TOPLEFT", f.content, "TOPLEFT", 0, -y)
+            row.icon:Hide()
+            row.text:ClearAllPoints()
+            row.text:SetPoint("LEFT", 0, 0)
+            row.text:SetPoint("RIGHT", -2, 0)
+            row.text:SetText(it.header)
+            row.data = nil
+            row:EnableMouse(false)
+        else
+            local d = it.data
+            row:SetPoint("TOPLEFT", f.content, "TOPLEFT", 8, -y)
+            row.icon:SetTexture(d.icon or QUESTION)
+            row.icon:Show()
+            row.text:ClearAllPoints()
+            row.text:SetPoint("LEFT", row.icon, "RIGHT", 6, 0)
+            row.text:SetPoint("RIGHT", -2, 0)
+            local label = d.name .. ((d.rank and d.rank ~= "") and (" (" .. d.rank .. ")") or "")
+            if (d.cost or 0) > money then
+                row.text:SetText(format("|cffff5555%s – %s|r", label, ns.Money(d.cost)))
             else
-                lines[#lines + 1] = format("%s – %s", label, ns.Money(r.cost))
+                row.text:SetText(format("%s – %s", label, ns.Money(d.cost)))
             end
+            row.data = d
+            row:EnableMouse(true)
         end
+        row:Show()
+        y = y + ROW_H
     end
-    if grand > 0 then
-        lines[#lines + 1] = " "
-        lines[#lines + 1] = format("|cffffd100Total:|r %s   |cffffd100You have:|r %s", ns.Money(grand), ns.Money(money))
-        if grand > money then lines[#lines + 1] = "|cffff5555Red = can't afford yet.|r" end
+    for i = used + 1, #f.rows do f.rows[i]:Hide() end
+
+    local foot = {}
+    if #items == 0 then
+        foot[1] = "Nothing to learn right now.\n|cffaaaaaaTalk to your trainers to update this list.|r"
+    else
+        if #items > maxRows then foot[#foot + 1] = format("|cffaaaaaa…and %d more|r", #items - maxRows) end
+        foot[#foot + 1] = format("|cffffd100Total:|r %s   |cffffd100You have:|r %s", ns.Money(grand), ns.Money(money))
+        if grand > money then foot[#foot + 1] = "|cffff5555Red = can't afford yet.|r" end
     end
+    f.footer:SetText(table.concat(foot, "\n"))
     f.TitleText:SetText(prof and (prof .. " – learnable recipes") or "What can I learn?")
-    f.text:SetText(table.concat(lines, "\n"))
-    f:SetHeight(f.text:GetStringHeight() + 60)
+    f:SetHeight(y + f.footer:GetStringHeight() + 60)
     f:Show()
 end
 
