@@ -266,9 +266,6 @@ end
 local lastTalentMsg
 function ns.CheckTalents()
     local n = (ns.db.remindTalents and ns.UnspentTalents()) or 0
-    if n > 0 and n ~= lastTalentMsg then
-        ns.Print(format("You have %d unspent talent point(s). Open your talents to spend them.", n))
-    end
     lastTalentMsg = n
     if ns.UI then
         ns.UI.TalentBubble(n)
