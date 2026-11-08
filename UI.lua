@@ -268,7 +268,8 @@ end
 local CHECKS = {
     { "remindLevelUp", "Remind me when I level up" },
     { "remindLogin",   "Remind me at login" },
-    { "remindCity",    "Show the to-do list in capital cities" },
+    { "trackerSection", "Show the to-do list above my quest tracker" },
+    { "remindCity",    "Update the to-do list when I enter a capital city" },
     { "remindNear",    "Show the to-do list when I'm near a trainer I need" },
     { "remindProf",    "Profession reminders" },
     { "remindCapCraft", "Warn every time I craft or gather while a profession is capped" },

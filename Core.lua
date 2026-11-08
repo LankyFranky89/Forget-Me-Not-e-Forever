@@ -13,6 +13,7 @@ local DEFAULTS = {
     remindQuests  = true,   -- class quests
     remindTalents = true,   -- unspent talent points
     remindRecipes = true,   -- new profession recipes at the trainer
+    trackerSection = true,  -- to-do section above the quest tracker
     showAlts      = true,   -- show other characters' to-do lists in the panel
     chat          = true,   -- chat messages
     alert         = true,   -- big on-screen text (raid-warning style)
