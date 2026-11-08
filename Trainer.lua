@@ -16,8 +16,8 @@ local function ServiceInfo(i)
     local stype, rank, icon
     for k = 2, 6 do
         local v = r[k]
-        if type(v) == "number" and v > 0 and not icon then
-            icon = v  -- texture file ID
+        if type(v) == "number" and v > 100000 and not icon then
+            icon = v  -- texture file ID (small numbers are levels or costs)
         elseif type(v) == "string" then
             if v:find("[\\/]") then
                 icon = icon or v  -- texture path
