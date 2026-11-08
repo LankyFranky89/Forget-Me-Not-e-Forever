@@ -238,6 +238,7 @@ local CHECKS = {
     { "remindCity",    "Show the to-do list in capital cities" },
     { "remindNear",    "Show the to-do list when I'm near a trainer I need" },
     { "remindProf",    "Profession reminders" },
+    { "remindCapCraft", "Warn every time I craft or gather while a profession is capped" },
     { "remindQuests",  "Remind me about class quests" },
     { "remindTalents", "Remind me about unspent talent points" },
     { "remindRecipes", "Remind me about new profession recipes at the trainer" },

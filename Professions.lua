@@ -47,6 +47,66 @@ function P.Scan(level)
     return out
 end
 
+-- Gathering spells -> profession name
+local GATHER = { ["Mining"] = "Mining", ["Skinning"] = "Skinning", ["Herb Gathering"] = "Herbalism",
+    ["Fishing"] = "Fishing" }
+
+-- Which profession a spell belongs to (crafting recipe or gathering), or nil
+local function ProfessionForSpell(spellID)
+    if C_TradeSkillUI and C_TradeSkillUI.GetTradeSkillLineForRecipe then
+        local ok, _, lineName, parentID = pcall(C_TradeSkillUI.GetTradeSkillLineForRecipe, spellID)
+        if ok and type(lineName) == "string" and lineName ~= "" then
+            if parentID and C_TradeSkillUI.GetTradeSkillDisplayName then
+                local ok2, parentName = pcall(C_TradeSkillUI.GetTradeSkillDisplayName, parentID)
+                if ok2 and type(parentName) == "string" and parentName ~= "" then return parentName end
+            end
+            return lineName
+        end
+    end
+    if C_Spell and C_Spell.GetSpellInfo then
+        local ok, info = pcall(C_Spell.GetSpellInfo, spellID)
+        if ok and info and type(info.name) == "string" then return GATHER[info.name] end
+    end
+end
+
+-- After each craft or gather: warn if that profession is capped (can't skill up)
+local lastWarn = 0
+local function OnCast(spellID)
+    if not ns.db.remindCapCraft then return end
+    local prof = ProfessionForSpell(spellID)
+    if not prof or not (GetProfessions and GetProfessionInfo) then return end
+    local idx = { GetProfessions() }
+    for i = 1, 6 do
+        if idx[i] then
+            local name, _, rank, maxRank = GetProfessionInfo(idx[i])
+            if name and (name == prof or prof:find(name, 1, true)) then
+                local rule = P.TIERS[maxRank]
+                if rule and rank >= maxRank and GetTime() - lastWarn > 3 then
+                    lastWarn = GetTime()
+                    local where = (P.SECONDARY[name] and P.SECONDARY[name][maxRank]) or ("a " .. name .. " trainer")
+                    local msg
+                    if UnitLevel("player") >= rule.level then
+                        msg = format("%s is capped at %d/%d – no skill-ups! Learn %s from %s.", name, rank, maxRank, rule.next, where)
+                    else
+                        msg = format("%s is capped at %d/%d – no skill-ups! %s needs level %d.", name, rank, maxRank, rule.next, rule.level)
+                    end
+                    ns.Print(msg)
+                    if UIErrorsFrame then UIErrorsFrame:AddMessage(msg, 1, 0.5, 0.2) end
+                end
+                return
+            end
+        end
+    end
+end
+
+local ev = CreateFrame("Frame")
+ev:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
+ev:SetScript("OnEvent", function(_, _, _, _, spellID)
+    if ns.db and type(spellID) == "number" then
+        C_Timer.After(0.3, function() OnCast(spellID) end)
+    end
+end)
+
 -- Recipes you can learn now, per profession: { name, count, cost }
 function P.NewRecipes(level)
     level = level or UnitLevel("player")

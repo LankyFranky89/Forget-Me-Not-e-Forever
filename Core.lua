@@ -9,6 +9,7 @@ local DEFAULTS = {
     remindCity    = true,   -- show the to-do list when entering a city below
     remindNear    = true,   -- show the to-do list when close to a trainer you need
     remindProf    = true,   -- profession reminders
+    remindCapCraft = true,  -- warn on every craft/gather while a profession is capped
     remindQuests  = true,   -- class quests
     remindTalents = true,   -- unspent talent points
     remindRecipes = true,   -- new profession recipes at the trainer
