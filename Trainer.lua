@@ -45,12 +45,18 @@ function T.Dump()
         ns.Print("Open a trainer window first, then type /tn dump.")
         return
     end
+    ns.Print("IsTradeskillTrainer: " .. tostring(IsTradeskillTrainer and IsTradeskillTrainer()))
+    local recipeCount = 0
+    for _, store in pairs(ns.char.recipes or {}) do for _ in pairs(store) do recipeCount = recipeCount + 1 end end
+    ns.Print("Saved recipes for this character: " .. recipeCount)
     for i = 1, n do
         local r = { GetTrainerServiceInfo(i) }
         local parts = {}
         for k = 1, 8 do parts[k] = tostring(r[k]) end
         local lvl = GetTrainerServiceLevelReq and GetTrainerServiceLevelReq(i)
-        ns.Print(format("%d: %s | lvl %s", i, table.concat(parts, ", "), tostring(lvl)))
+        local sk = { GetTrainerServiceSkillReq and GetTrainerServiceSkillReq(i) }
+        ns.Print(format("%d: %s | lvl %s | skill %s, %s, %s", i, table.concat(parts, ", "), tostring(lvl),
+            tostring(sk[1]), tostring(sk[2]), tostring(sk[3])))
     end
 end
 
