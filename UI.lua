@@ -160,6 +160,22 @@ local function BuildText()
 
     add(" ")
     add(GOLD .. "Professions|r")
+    -- recipes per profession, not counting training tiers (Journeyman etc.)
+    local recipeSum = {}
+    for _, p in ipairs(ns.Prof.RecipeList(level)) do
+        local count, cost = 0, 0
+        for _, r in ipairs(p.list) do
+            local isTier = false
+            for _, t in pairs(ns.Prof.TIERS) do
+                if (r.name or ""):find(t.next, 1, true) then isTier = true end
+            end
+            if not isTier then
+                count = count + 1
+                cost = cost + (r.cost or 0)
+            end
+        end
+        recipeSum[p.name] = { count = count, cost = cost }
+    end
     local any = false
     if GetProfessions then
         local idx = { GetProfessions() }
@@ -168,7 +184,13 @@ local function BuildText()
                 local name, _, rank, maxRank = GetProfessionInfo(idx[i])
                 if name then
                     any = true
-                    add(format("%s  %d / %d", name, rank, maxRank))
+                    local line = format("%s  %d / %d", name, rank, maxRank)
+                    local r = recipeSum[name]
+                    if r and r.count > 0 then
+                        line = line .. format("  %s· %d recipe%s can be learned (%s)|r", GREY, r.count,
+                            r.count == 1 and "" or "s", ns.Money(r.cost))
+                    end
+                    add(line)
                 end
             end
         end
@@ -176,23 +198,6 @@ local function BuildText()
     if not any then add(GREY .. "No professions found.|r") end
     for _, e in ipairs(ns.Prof.Scan(level)) do
         add("|cffff9966" .. e.text .. "|r")
-    end
-    local recipes = ns.Prof.RecipeList(level)
-    if #recipes > 0 then
-        local money = GetMoney()
-        add(" ")
-        add(GOLD .. "Recipes waiting at your trainers|r " .. GREY .. "(you have " .. ns.Money(money) .. ")|r")
-        for _, p in ipairs(recipes) do
-            add(format("%s%s|r  %s(%d · total %s)|r", WHITE, p.name, GREY, #p.list, ns.Money(p.cost)))
-            for _, r in ipairs(p.list) do
-                local label = r.name .. ((r.rank and r.rank ~= "") and (" (" .. r.rank .. ")") or "")
-                if (r.cost or 0) > money then
-                    add(format("   |cffff5555%s – %s (can't afford yet)|r", label, ns.Money(r.cost)))
-                else
-                    add(format("   %s – %s", label, ns.Money(r.cost)))
-                end
-            end
-        end
     end
 
     local quests = ns.Quests.Open(level)
