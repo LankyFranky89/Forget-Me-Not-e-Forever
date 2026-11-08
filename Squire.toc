@@ -2,7 +2,7 @@
 ## Title: Squire
 ## Notes: Your leveling helper: new spells, profession milestones and recipes, talents and class quests.
 ## Author: LankyFranky89
-## Version: 0.8.2
+## Version: 0.8.3
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 ## SavedVariables: SquireDB
 ## SavedVariablesPerCharacter: SquireCharDB

@@ -5,9 +5,9 @@ ns.Prof = P
 
 -- Keyed by your current cap. Edit here if Forever's rules differ.
 P.TIERS = {
-    [75]  = { next = "Journeyman", cap = 150, level = 10, skill = 50 },
-    [150] = { next = "Expert",     cap = 225, level = 20, skill = 125 },
-    [225] = { next = "Artisan",    cap = 300, level = 35, skill = 200 },
+    [75]  = { next = "Journeyman", cap = 150, skill = 50 },
+    [150] = { next = "Expert",     cap = 225, skill = 125 },
+    [225] = { next = "Artisan",    cap = 300, skill = 200 },
 }
 
 -- Secondary professions don't always train at a trainer in Vanilla
@@ -16,6 +16,21 @@ P.SECONDARY = {
     ["First Aid"] = { [150] = "a book from a vendor", [225] = "a quest" },
     ["Fishing"]   = { [150] = "a book from a vendor", [225] = "a quest" },
 }
+
+-- Level and skill needed for the next tier. Read from that profession's trainer
+-- (talk to it once); until then: no level requirement, Vanilla skill requirement.
+function P.Req(name, rule)
+    local store = ns.char.recipes and ns.char.recipes[name]
+    if store then
+        for _, r in pairs(store) do
+            local label = (r.name or "") .. " " .. (r.rank or "")
+            if label:find(rule.next, 1, true) then
+                return r.level or 0, (r.skill and r.skill > 0) and r.skill or rule.skill
+            end
+        end
+    end
+    return 0, rule.skill
+end
 
 -- Returns one entry per profession that needs attention
 function P.Scan(level)
@@ -30,12 +45,14 @@ function P.Scan(level)
             if rule then
                 local where = (P.SECONDARY[name] and P.SECONDARY[name][maxRank]) or ("a " .. name .. " trainer")
                 local e = { name = name, rank = rank, max = maxRank, rule = rule, where = where }
-                if rank >= rule.skill and level >= rule.level then
+                local reqLevel, reqSkill = P.Req(name, rule)
+                e.reqLevel = reqLevel
+                if rank >= reqSkill and level >= reqLevel then
                     e.state = "train"
                     e.text = format("%s %d/%d: you can learn %s %s now, from %s.", name, rank, maxRank, rule.next, name, where)
                 elseif rank >= maxRank then
                     e.state = "capped"
-                    e.text = format("%s is capped at %d. %s needs level %d.", name, maxRank, rule.next, rule.level)
+                    e.text = format("%s is capped at %d. %s needs level %d.", name, maxRank, rule.next, reqLevel)
                 elseif maxRank - rank <= ns.db.profWarn then
                     e.state = "near"
                     e.text = format("%s %d/%d: %d point(s) to the cap.", name, rank, maxRank, maxRank - rank)
@@ -85,10 +102,11 @@ local function OnCast(spellID)
                     lastWarn = GetTime()
                     local where = (P.SECONDARY[name] and P.SECONDARY[name][maxRank]) or ("a " .. name .. " trainer")
                     local msg
-                    if UnitLevel("player") >= rule.level then
+                    local reqLevel = P.Req(name, rule)
+                    if UnitLevel("player") >= reqLevel then
                         msg = format("%s is capped at %d/%d – no skill-ups! Learn %s from %s.", name, rank, maxRank, rule.next, where)
                     else
-                        msg = format("%s is capped at %d/%d – no skill-ups! %s needs level %d.", name, rank, maxRank, rule.next, rule.level)
+                        msg = format("%s is capped at %d/%d – no skill-ups! %s needs level %d.", name, rank, maxRank, rule.next, reqLevel)
                     end
                     ns.Print(msg)
                     if UIErrorsFrame then UIErrorsFrame:AddMessage(msg, 1, 0.5, 0.2) end

@@ -66,7 +66,7 @@ function N.BuildTasks()
             if e.state == "train" then
                 detail = format("Learn %s (%d/%d)", e.rule.next, e.rank, e.max)
             else
-                detail = format("Capped at %d/%d – %s needs level %d", e.rank, e.max, e.rule.next, e.rule.level)
+                detail = format("Capped at %d/%d – %s needs level %d", e.rank, e.max, e.rule.next, e.reqLevel or 0)
             end
             tasks[#tasks + 1] = {
                 title = e.name,
