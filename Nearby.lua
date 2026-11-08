@@ -79,6 +79,7 @@ function N.BuildTasks()
         for _, r in ipairs(ns.Prof.NewRecipes()) do
             tasks[#tasks + 1] = {
                 title = r.name .. " recipes",
+                recipeProf = r.name,
                 detail = format("%d new recipe(s) · %s", r.count, ns.Money(r.cost)),
                 trainer = FindTrainer(function(t) return t.kind == "profession" and t.prof == r.name end),
             }
@@ -115,7 +116,7 @@ end
 
 local function CreateList()
     local f = ns.MakeWindow("SquireListFrame")
-    f:SetSize(380, 90)
+    f:SetSize(480, 90)
     f:SetPoint("TOP", 0, -140)
     f:SetFrameStrata("HIGH")
     f:SetMovable(true)
@@ -127,7 +128,7 @@ local function CreateList()
     f.rows = {}
     for i = 1, ROWS do
         local r = CreateFrame("Frame", nil, f)
-        r:SetSize(350, 40)
+        r:SetSize(450, 40)
         r:SetPoint("TOPLEFT", 14, -30 - (i - 1) * 44)
         r.title = r:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         r.title:SetPoint("TOPLEFT")
@@ -143,6 +144,11 @@ local function CreateList()
         r.btn:SetPoint("RIGHT")
         r.btn:SetText("Waypoint")
         r.btn:SetScript("OnClick", function(b) if b.trainer then SetWaypoint(b.trainer) end end)
+        r.rbtn = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
+        r.rbtn:SetSize(150, 22)
+        r.rbtn:SetText("Learnable recipes")
+        r.rbtn:SetScript("OnClick", function(b) if b.prof then N.ShowRecipes(b.prof) end end)
+        r.rbtn:Hide()
         f.rows[i] = r
     end
     f.hide = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
@@ -177,12 +183,74 @@ function N.ShowList(forced)
             r.detail:SetText(t.detail)
             r.btn.trainer = tr
             if tr then r.btn:Show() else r.btn:Hide() end
+            r.rbtn.prof = t.recipeProf
+            r.rbtn:ClearAllPoints()
+            if t.recipeProf then
+                if tr then r.rbtn:SetPoint("RIGHT", r.btn, "LEFT", -4, 0) else r.rbtn:SetPoint("RIGHT") end
+                r.rbtn:Show()
+                r.title:SetPoint("RIGHT", tr and -244 or -156, 0)
+                r.detail:SetPoint("RIGHT", tr and -244 or -156, 0)
+            else
+                r.rbtn:Hide()
+                r.title:SetPoint("RIGHT", -90, 0)
+                r.detail:SetPoint("RIGHT", -90, 0)
+            end
             r:Show()
         else
             r:Hide()
         end
     end
     f:SetHeight(30 + shown * 44 + 40)
+    f:Show()
+end
+
+-- Window listing one profession's learnable recipes with prices
+function N.ShowRecipes(prof)
+    local f = N.recipeFrame
+    if not f then
+        f = ns.MakeWindow("SquireRecipeFrame")
+        f:SetSize(360, 200)
+        f:SetPoint("CENTER", 0, 60)
+        f:SetFrameStrata("DIALOG")
+        f:SetMovable(true)
+        f:EnableMouse(true)
+        f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving)
+        f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        tinsert(UISpecialFrames, "SquireRecipeFrame")
+        f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        f.text:SetPoint("TOPLEFT", 16, -34)
+        f.text:SetWidth(328)
+        f.text:SetJustifyH("LEFT")
+        f.text:SetSpacing(3)
+        N.recipeFrame = f
+    end
+    local entry
+    for _, p in ipairs(ns.Prof.RecipeList()) do
+        if p.name == prof then entry = p end
+    end
+    local money = GetMoney()
+    local lines = {}
+    if not entry then
+        lines[1] = "Nothing to learn right now."
+    else
+        for _, r in ipairs(entry.list) do
+            local label = r.name .. ((r.rank and r.rank ~= "") and (" (" .. r.rank .. ")") or "")
+            if (r.cost or 0) > money then
+                lines[#lines + 1] = format("|cffff5555%s – %s|r", label, ns.Money(r.cost))
+            else
+                lines[#lines + 1] = format("%s – %s", label, ns.Money(r.cost))
+            end
+        end
+        lines[#lines + 1] = " "
+        lines[#lines + 1] = format("|cffffd100Total:|r %s   |cffffd100You have:|r %s", ns.Money(entry.cost), ns.Money(money))
+        if entry.cost > money then
+            lines[#lines + 1] = "|cffff5555Red = can't afford yet.|r"
+        end
+    end
+    f.TitleText:SetText(prof .. " – learnable recipes")
+    f.text:SetText(table.concat(lines, "\n"))
+    f:SetHeight(f.text:GetStringHeight() + 60)
     f:Show()
 end
 
