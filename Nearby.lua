@@ -233,9 +233,25 @@ function N.ShowRecipes(prof)
     local money = GetMoney()
     local lines = {}
     local grand = 0
-    if #entries == 0 then
+    -- the full list (prof = nil) also starts with class spells
+    if not prof and ns.HasServiceData() then
+        local spells, cost = ns.GetAvailable()
+        if #spells > 0 then
+            grand = grand + cost
+            lines[#lines + 1] = format("|cffffd100Class trainer|r |cffaaaaaa(%s)|r", ns.Money(cost))
+            for _, s in ipairs(spells) do
+                local label = ns.SpellLabel(s)
+                if (s.cost or 0) > money then
+                    lines[#lines + 1] = format("|cffff5555%s – %s|r", label, ns.Money(s.cost))
+                else
+                    lines[#lines + 1] = format("%s – %s", label, ns.Money(s.cost))
+                end
+            end
+        end
+    end
+    if #entries == 0 and #lines == 0 then
         lines[1] = "Nothing to learn right now."
-        lines[2] = "|cffaaaaaaTalk to a profession trainer to update this list.|r"
+        lines[2] = "|cffaaaaaaTalk to your trainers to update this list.|r"
     end
     for _, entry in ipairs(entries) do
         grand = grand + entry.cost
@@ -252,12 +268,12 @@ function N.ShowRecipes(prof)
             end
         end
     end
-    if #entries > 0 then
+    if grand > 0 then
         lines[#lines + 1] = " "
         lines[#lines + 1] = format("|cffffd100Total:|r %s   |cffffd100You have:|r %s", ns.Money(grand), ns.Money(money))
         if grand > money then lines[#lines + 1] = "|cffff5555Red = can't afford yet.|r" end
     end
-    f.TitleText:SetText((prof or "All professions") .. " – learnable recipes")
+    f.TitleText:SetText(prof and (prof .. " – learnable recipes") or "What can I learn?")
     f.text:SetText(table.concat(lines, "\n"))
     f:SetHeight(f.text:GetStringHeight() + 60)
     f:Show()
