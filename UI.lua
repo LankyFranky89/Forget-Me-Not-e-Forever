@@ -163,8 +163,22 @@ local function BuildText()
     for _, e in ipairs(ns.Prof.Scan(level)) do
         add("|cffff9966" .. e.text .. "|r")
     end
-    for _, r in ipairs(ns.Prof.NewRecipes(level)) do
-        add(format("|cffff9966%d new %s recipe(s) at the trainer (%s)|r", r.count, r.name, ns.Money(r.cost)))
+    local recipes = ns.Prof.RecipeList(level)
+    if #recipes > 0 then
+        local money = GetMoney()
+        add(" ")
+        add(GOLD .. "Recipes waiting at your trainers|r " .. GREY .. "(you have " .. ns.Money(money) .. ")|r")
+        for _, p in ipairs(recipes) do
+            add(format("%s%s|r  %s(%d · total %s)|r", WHITE, p.name, GREY, #p.list, ns.Money(p.cost)))
+            for _, r in ipairs(p.list) do
+                local label = r.name .. ((r.rank and r.rank ~= "") and (" (" .. r.rank .. ")") or "")
+                if (r.cost or 0) > money then
+                    add(format("   |cffff5555%s – %s (can't afford yet)|r", label, ns.Money(r.cost)))
+                else
+                    add(format("   %s – %s", label, ns.Money(r.cost)))
+                end
+            end
+        end
     end
 
     local quests = ns.Quests.Open(level)

@@ -354,6 +354,13 @@ SlashCmdList.SQUIRE = function(input)
         ns.char.skipped[rest] = nil
         ns.Print("No longer skipping: " .. rest)
         ns.UI.Refresh()
+    elseif cmd == "recipes" then
+        local list = ns.Prof.RecipeList()
+        if #list == 0 then ns.Print("No recipes waiting. Talk to your profession trainers to update the list.") end
+        for _, p in ipairs(list) do
+            ns.Print(format("%s: %d recipe(s), total %s", p.name, #p.list, ns.Money(p.cost)))
+            for _, r in ipairs(p.list) do ns.Print("   " .. r.name .. " – " .. ns.Money(r.cost)) end
+        end
     elseif cmd == "dump" then
         ns.Trainer.Dump()
     elseif cmd == "alts" then
@@ -378,6 +385,6 @@ SlashCmdList.SQUIRE = function(input)
         ns.Print("Spell data cleared. Talk to your class trainer to read it again.")
         ns.UI.Refresh()
     else
-        ns.Print("/squire (or /tn) – panel · /tn check · /tn list · /tn alts · /tn forget <name> · /tn options · /tn skip <spell> · /tn unskip <spell> · /tn reset")
+        ns.Print("/squire (or /tn) – panel · /tn check · /tn list · /tn recipes · /tn alts · /tn forget <name> · /tn options · /tn skip <spell> · /tn unskip <spell> · /tn reset")
     end
 end

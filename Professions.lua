@@ -125,6 +125,36 @@ ev:SetScript("OnEvent", function(_, _, _, _, spellID)
     end
 end)
 
+-- Every recipe you have the skill for but haven't learned, per profession,
+-- cheapest first: { name = prof, list = { {name, rank, cost}... }, cost = total }
+function P.RecipeList(level)
+    level = level or UnitLevel("player")
+    local out = {}
+    if not (GetProfessions and GetProfessionInfo) then return out end
+    local idx = { GetProfessions() }
+    for i = 1, 6 do
+        if idx[i] then
+            local name, _, rank = GetProfessionInfo(idx[i])
+            local store = name and ns.char.recipes[name]
+            if store then
+                local list, total = {}, 0
+                for _, r in pairs(store) do
+                    if not r.known and r.skill <= rank and r.level <= level then
+                        list[#list + 1] = r
+                        total = total + (r.cost or 0)
+                    end
+                end
+                table.sort(list, function(a, b)
+                    if (a.cost or 0) ~= (b.cost or 0) then return (a.cost or 0) < (b.cost or 0) end
+                    return a.name < b.name
+                end)
+                if #list > 0 then out[#out + 1] = { name = name, list = list, cost = total } end
+            end
+        end
+    end
+    return out
+end
+
 -- Recipes you can learn now, per profession: { name, count, cost }
 function P.NewRecipes(level)
     level = level or UnitLevel("player")
