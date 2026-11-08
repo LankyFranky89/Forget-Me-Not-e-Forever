@@ -61,10 +61,16 @@ function N.BuildTasks()
         }
     end
     for _, e in ipairs(ns.Prof.Scan()) do
-        if e.state == "train" then
+        if e.state == "train" or e.state == "capped" then
+            local detail
+            if e.state == "train" then
+                detail = format("Learn %s (%d/%d)", e.rule.next, e.rank, e.max)
+            else
+                detail = format("Capped at %d/%d – %s needs level %d", e.rank, e.max, e.rule.next, e.rule.level)
+            end
             tasks[#tasks + 1] = {
                 title = e.name,
-                detail = format("Learn %s (%d/%d)", e.rule.next, e.rank, e.max),
+                detail = detail,
                 trainer = FindTrainer(function(t) return t.kind == "profession" and t.prof == e.name end),
             }
         end
