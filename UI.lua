@@ -205,7 +205,8 @@ local function BuildText()
         add(" ")
         add(GOLD .. "Class quests|r")
         for _, q in ipairs(quests) do
-            add(format("%s  %s(level %d · %s)|r", q.quest, GREY, q.level, q.reward))
+            add(format("%s  %s(level %d · %s)|r%s", q.quest, GREY, q.level, q.reward,
+                q.inLog and " |cff66ff66in quest log|r" or ""))
         end
     end
 

@@ -89,7 +89,7 @@ function N.BuildTasks()
         for _, q in ipairs(ns.Quests.Open()) do
             tasks[#tasks + 1] = {
                 title = "Class quest",
-                detail = format("%s – rewards %s", q.quest, q.reward),
+                detail = format("%s – rewards %s%s", q.quest, q.reward, q.inLog and " (in quest log)" or ""),
                 trainer = FindTrainer(function(t) return t.kind == "class" and t.class == classFile end),
             }
         end
