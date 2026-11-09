@@ -3,7 +3,7 @@ local ADDON, ns = ...
 local UI = {}
 ns.UI = UI
 
-local ICON = "Interface\\Icons\\INV_Misc_Book_09"
+local ICON = "Interface\\AddOns\\Squire\\Squire"
 
 -- Minimap button -----------------------------------------------------------
 local function PlaceButton(b)
