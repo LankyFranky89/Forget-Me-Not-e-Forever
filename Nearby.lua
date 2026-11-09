@@ -474,6 +474,172 @@ local function Tick()
     end
 end
 
+-- "Before you leave" check: flight map opened or Hearthstone cast started --------
+local function TrainersHere(match)
+    local zone = GetRealZoneText()
+    for _, t in pairs(ns.db.trainers) do
+        if t.zone == zone and match(t) then return t end
+    end
+end
+
+local function IsTier(name)
+    for _, t in pairs(ns.Prof.TIERS) do
+        if (name or ""):find(t.next, 1, true) then return true end
+    end
+    return false
+end
+
+-- Things you can still do in this city/zone, at trainers you've visited here
+function N.DepartureItems(forHearth)
+    local items = {}
+    local _, classFile = UnitClass("player")
+    local spells, cost = ns.GetAvailable()
+    local ct = #spells > 0 and TrainersHere(function(t) return t.kind == "class" and t.class == classFile end)
+    if ct then
+        local names = {}
+        for i, s in ipairs(spells) do names[i] = ns.SpellLabel(s) end
+        items[#items + 1] = { title = format("%d spell(s) at your class trainer", #spells),
+            detail = table.concat(names, ", ") .. " · " .. ns.Money(cost) }
+    end
+    for _, p in ipairs(ns.Prof.RecipeList()) do
+        local pt = TrainersHere(function(t) return t.kind == "profession" and t.prof == p.name end)
+        if pt then
+            local n, c = 0, 0
+            for _, r in ipairs(p.list) do
+                if not IsTier(r.name) then n = n + 1; c = c + (r.cost or 0) end
+            end
+            if n > 0 then
+                items[#items + 1] = { title = format("%s: %d recipe(s) can be learned", p.name, n),
+                    detail = pt.name .. " · " .. ns.Money(c) }
+            end
+        end
+    end
+    for _, e in ipairs(ns.Prof.Scan()) do
+        if e.state == "train" and TrainersHere(function(t) return t.kind == "profession" and t.prof == e.name end) then
+            items[#items + 1] = { title = format("%s %d/%d", e.name, e.rank, e.max),
+                detail = format("Learn %s %s before you go", e.rule.next, e.name) }
+        end
+    end
+    if not forHearth and ns.db.remindInn and IsResting() and GetBindLocation then
+        local bind = GetBindLocation() or ""
+        local zone, sub = GetRealZoneText() or "", GetSubZoneText() or ""
+        local spot = ns.char.bindSpot
+        local boundHere = bind == zone or bind == sub or (spot and spot.bind == bind and spot.zone == zone)
+        if bind ~= "" and not boundHere then
+            items[#items + 1] = { title = "Hearthstone", detail = "Still bound to " .. bind .. " – bind here?" }
+        end
+    end
+    return items
+end
+
+local function CreateDeparture()
+    local f = ns.MakeWindow("ForgetMeNotDepartureFrame")
+    f:SetSize(380, 120)
+    f:SetFrameStrata("DIALOG")
+    f:SetClampedToScreen(true)
+    tinsert(UISpecialFrames, "ForgetMeNotDepartureFrame")
+    f.lines = {}
+    f.notes = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    f.notes:SetSize(100, 22)
+    f.notes:SetText("My notes")
+    f.notes:SetScript("OnClick", function() ns.UI.ToggleNotes() end)
+    f.go = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    f.go:SetSize(110, 22)
+    f.go:SetPoint("BOTTOMRIGHT", -12, 10)
+    f.go:SetScript("OnClick", function() f:Hide() end)
+    f.notes:SetPoint("RIGHT", f.go, "LEFT", -6, 0)
+    N.departure = f
+    return f
+end
+
+function N.ShowDeparture(forHearth)
+    if not ns.db or not ns.db.remindDeparture then return end
+    local items = N.DepartureItems(forHearth)
+    if #items == 0 then
+        if N.departure then N.departure:Hide() end
+        return
+    end
+    local f = N.departure or CreateDeparture()
+    f.TitleText:SetText("Before you leave " .. (GetRealZoneText() or "") .. "…")
+    f.go:SetText(forHearth and "Got it" or "Fly anyway")
+    local y = 34
+    for i, it in ipairs(items) do
+        local l = f.lines[i]
+        if not l then
+            l = {}
+            l.t = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            l.t:SetJustifyH("LEFT")
+            l.d = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            l.d:SetJustifyH("LEFT")
+            f.lines[i] = l
+        end
+        l.t:ClearAllPoints(); l.t:SetPoint("TOPLEFT", 16, -y); l.t:SetWidth(348)
+        l.t:SetText(it.title)
+        y = y + l.t:GetStringHeight() + 2
+        l.d:ClearAllPoints(); l.d:SetPoint("TOPLEFT", 16, -y); l.d:SetWidth(348)
+        l.d:SetText(it.detail)
+        y = y + l.d:GetStringHeight() + 10
+        l.t:Show(); l.d:Show()
+    end
+    for i = #items + 1, #f.lines do f.lines[i].t:Hide(); f.lines[i].d:Hide() end
+    f:SetHeight(y + 40)
+    f:ClearAllPoints()
+    local map = (FlightMapFrame and FlightMapFrame:IsShown() and FlightMapFrame) or (TaxiFrame and TaxiFrame:IsShown() and TaxiFrame)
+    if map then
+        f:SetPoint("TOPLEFT", map, "TOPRIGHT", 8, 0)
+    else
+        f:SetPoint("CENTER", 0, 80)
+    end
+    f:Show()
+end
+
+do
+    local ev = CreateFrame("Frame")
+    pcall(ev.RegisterEvent, ev, "TAXIMAP_OPENED")
+    pcall(ev.RegisterEvent, ev, "TAXIMAP_CLOSED")
+    pcall(ev.RegisterUnitEvent, ev, "UNIT_SPELLCAST_START", "player")
+    pcall(ev.RegisterUnitEvent, ev, "UNIT_SPELLCAST_SUCCEEDED", "player")
+    -- Hearthstone, and a mage's own Teleport/Portal spells
+    local function IsHearth(spellID)
+        if type(spellID) ~= "number" then return false end
+        local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(spellID)
+        if type(name) ~= "string" then return false end
+        return name == "Hearthstone" or name:find("^Teleport:") ~= nil or name:find("^Portal:") ~= nil
+    end
+    -- Boats, zeppelins and portal rooms: show when you walk onto a dock or into a portal area
+    local DOCK_WORDS = { "Dock", "Harbor", "Harbour", "Pier", "Wharf", "Zeppelin", "Portal" }
+    local seenSub = {}
+    local zev = CreateFrame("Frame")
+    zev:RegisterEvent("ZONE_CHANGED")
+    zev:RegisterEvent("ZONE_CHANGED_INDOORS")
+    zev:SetScript("OnEvent", function()
+        if not ns.db then return end
+        local sub = GetSubZoneText() or ""
+        if sub == "" or seenSub[sub] then return end
+        for _, w in ipairs(DOCK_WORDS) do
+            if sub:find(w, 1, true) then
+                seenSub[sub] = true
+                N.ShowDeparture(true)
+                return
+            end
+        end
+    end)
+    ev:SetScript("OnEvent", function(_, event, unit, _, spellID)
+        if not ns.db then return end
+        if event == "TAXIMAP_OPENED" then
+            C_Timer.After(0.2, function() N.ShowDeparture(false) end)
+        elseif event == "TAXIMAP_CLOSED" then
+            if N.departure then N.departure:Hide() end
+        elseif event == "UNIT_SPELLCAST_START" and unit == "player" then
+            local ok, hs = pcall(IsHearth, spellID)
+            if ok and hs then N.ShowDeparture(true) end
+        elseif event == "UNIT_SPELLCAST_SUCCEEDED" and unit == "player" then
+            local ok, hs = pcall(IsHearth, spellID)
+            if ok and hs and N.departure then N.departure:Hide() end
+        end
+    end)
+end
+
 function N.Init()
     C_Timer.NewTicker(2, Tick)
 end

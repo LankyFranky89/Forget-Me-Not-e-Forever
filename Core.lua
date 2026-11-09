@@ -11,6 +11,7 @@ local DEFAULTS = {
     remindProf    = true,   -- profession reminders
     remindCapCraft = false, -- warn on every craft/gather while a profession is capped (off: to-do list only)
     remindInn     = true,
+    remindDeparture = true, -- "Before you leave" window at flight masters and on Hearthstone
     remindFlight  = true,   -- undiscovered flight paths in your zone   -- remind to bind your hearthstone at a new inn
     remindQuests  = true,   -- class quests
     remindTalents = true,   -- unspent talent points

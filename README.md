@@ -23,6 +23,7 @@ Talk to your class trainer once. The addon reads every spell, rank, level and co
 - Inn reminder: entering an inn that isn't your hearthstone spot reminds you to bind it there (once per place per session).
 - Flight paths: entering a zone with a flight path you haven't learned tells you, with a waypoint in the to-do list. /fmn flights shows what the game reports.
 - My notes: a notepad in the panel (or /fmn notes), saved per character.
+- Before you leave: opening a flight map, casting Hearthstone or a Teleport/Portal spell, or walking onto a dock, zeppelin tower or portal area shows what you can still do in this city/zone (spells, recipes, profession training, inn bind), with a My notes button.
 - Class quests for all nine classes (from Forever quest guides): abilities like stances, forms, demons and racial priest spells, plus key weapon quests. Skip one with /fmn skip <quest name>.
 - Minimap button: left-click opens the panel, right-click opens the to-do list, drag to move.
 
