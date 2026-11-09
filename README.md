@@ -20,6 +20,7 @@ Talk to your class trainer once. The addon reads every spell, rank, level and co
 - New profession recipes: talk to a profession trainer once; it tells you when your skill is high enough for new recipes there.
 - Capped profession (e.g. 75/75): shows in the to-do list when you enter a capital or get close to the trainer. Optional: a warning on every craft or gather (off by default, in Options).
 - Recipes waiting: the panel lists every recipe you have the skill for but haven't bought, with prices; ones you can't afford are shown in red. "What can I learn?" window (spells + recipes) opens anywhere: button in the panel, Shift-click the minimap button, or /fmn recipes.
+- Inn reminder: entering an inn that isn't your hearthstone spot reminds you to bind it there (once per place per session).
 - Class quests for all nine classes (from Forever quest guides): abilities like stances, forms, demons and racial priest spells, plus key weapon quests. Skip one with /fmn skip <quest name>.
 - Minimap button: left-click opens the panel, right-click opens the to-do list, drag to move.
 

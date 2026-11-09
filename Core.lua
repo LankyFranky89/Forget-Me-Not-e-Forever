@@ -10,6 +10,7 @@ local DEFAULTS = {
     remindNear    = true,   -- show the to-do list when close to a trainer you need
     remindProf    = true,   -- profession reminders
     remindCapCraft = false, -- warn on every craft/gather while a profession is capped (off: to-do list only)
+    remindInn     = true,   -- remind to bind your hearthstone at a new inn
     remindQuests  = true,   -- class quests
     remindTalents = true,   -- unspent talent points
     remindRecipes = true,   -- new profession recipes at the trainer
@@ -272,6 +273,22 @@ function ns.CheckTalents()
         ns.UI.Refresh()
     end
 end
+-- Inn reminder: when you start resting somewhere that isn't your hearthstone spot
+local innSeen = {}   -- places already reminded about this session
+function ns.CheckInn()
+    if not ns.db.remindInn or not IsResting() then return end
+    local bind = GetBindLocation and GetBindLocation() or ""
+    local sub, zone = GetSubZoneText() or "", GetRealZoneText() or ""
+    if bind == "" or bind == sub or bind == zone then return end
+    local key = zone .. "/" .. sub
+    if innSeen[key] then return end
+    innSeen[key] = true
+    local here = (sub ~= "" and sub) or zone
+    local msg = format("You're at an inn in %s. Your hearthstone is set to %s – talk to the innkeeper to bind it here.", here, bind)
+    ns.Print(msg)
+    if UIErrorsFrame then UIErrorsFrame:AddMessage("Bind your hearthstone here? (now: " .. bind .. ")", 1, 0.82, 0) end
+end
+
 -- Events
 local f = CreateFrame("Frame")
 local lastSkill = 0
@@ -284,6 +301,7 @@ pcall(f.RegisterEvent, f, "CHARACTER_POINTS_CHANGED")
 pcall(f.RegisterEvent, f, "PLAYER_TALENT_UPDATE")
 pcall(f.RegisterEvent, f, "TRAIT_CONFIG_UPDATED")
 f:RegisterEvent("PLAYER_REGEN_ENABLED")
+f:RegisterEvent("PLAYER_UPDATE_RESTING")
 f:RegisterEvent("TRAINER_SHOW")
 f:RegisterEvent("TRAINER_UPDATE")
 f:RegisterEvent("TRAINER_CLOSED")
@@ -362,6 +380,9 @@ f:SetScript("OnEvent", function(_, event, arg1)
         if ns.UI then ns.UI.talentDismissedAt = nil end  -- a new level shows it right away
         C_Timer.After(1.5, function() ns.CheckTalents() end)
         C_Timer.After(2, function() ns.Quests.Check(level) end)
+
+    elseif event == "PLAYER_UPDATE_RESTING" then
+        C_Timer.After(1, ns.CheckInn)
 
     elseif event == "PLAYER_REGEN_ENABLED" then
         ns.CheckTalents()  -- the bubble waits until combat ends
