@@ -270,7 +270,7 @@ function N.ShowRecipes(prof)
     if not f then
         f = ns.MakeWindow("SquireRecipeFrame")
         f:SetSize(450, 200)
-        f:SetPoint("CENTER", 0, 60)
+        f:SetClampedToScreen(true)
         f:SetFrameStrata("DIALOG")
         f:SetMovable(true)
         f:EnableMouse(true)
@@ -359,6 +359,18 @@ function N.ShowRecipes(prof)
     end
     f.footer:SetText(table.concat(foot, "\n"))
     f.TitleText:SetText(prof and (prof .. " – learnable recipes") or "What can I learn?")
+    -- sit next to the Squire panel instead of on top of it
+    f:ClearAllPoints()
+    local panel = ns.UI and ns.UI.panel
+    if panel and panel:IsShown() then
+        if (panel:GetRight() or 0) + 460 < UIParent:GetRight() then
+            f:SetPoint("TOPLEFT", panel, "TOPRIGHT", 8, 0)
+        else
+            f:SetPoint("TOPRIGHT", panel, "TOPLEFT", -8, 0)
+        end
+    else
+        f:SetPoint("CENTER", 0, 60)
+    end
     f:SetHeight(y + f.footer:GetStringHeight() + 60)
     f:Show()
 end
