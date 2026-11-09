@@ -560,9 +560,12 @@ local function CreateDeparture()
     return f
 end
 
-function N.ShowDeparture(forHearth)
+function N.ShowDeparture(forHearth, always)
     if not ns.db or not ns.db.remindDeparture then return end
     local items = N.DepartureItems(forHearth)
+    if #items == 0 and always then
+        items[1] = { title = "|cff33ff33All done here|r", detail = "Nothing missed in this area. Check My notes?" }
+    end
     if #items == 0 then
         if N.departure then N.departure:Hide() end
         return
@@ -635,7 +638,7 @@ do
     ev:SetScript("OnEvent", function(_, event, unit, _, spellID)
         if not ns.db then return end
         if event == "TAXIMAP_OPENED" then
-            C_Timer.After(0.2, function() N.ShowDeparture(false) end)
+            C_Timer.After(0.2, function() N.ShowDeparture(false, true) end)
         elseif event == "TAXIMAP_CLOSED" then
             if N.departure then N.departure:Hide() end
         elseif event == "UNIT_SPELLCAST_START" and unit == "player" then
