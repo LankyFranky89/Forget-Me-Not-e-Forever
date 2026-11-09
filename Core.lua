@@ -301,6 +301,8 @@ f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("PLAYER_LOGIN")
 f:RegisterEvent("PLAYER_LEVEL_UP")
 f:RegisterEvent("SKILL_LINES_CHANGED")
+pcall(f.RegisterEvent, f, "CHAT_MSG_SKILL")          -- "Your skill in X has increased to N."
+pcall(f.RegisterEvent, f, "TRADE_SKILL_LIST_UPDATE")
 pcall(f.RegisterEvent, f, "CHARACTER_POINTS_CHANGED")
 pcall(f.RegisterEvent, f, "PLAYER_TALENT_UPDATE")
 pcall(f.RegisterEvent, f, "TRAIT_CONFIG_UPDATED")
@@ -401,11 +403,14 @@ f:SetScript("OnEvent", function(_, event, arg1)
     elseif event == "CHARACTER_POINTS_CHANGED" or event == "PLAYER_TALENT_UPDATE" or event == "TRAIT_CONFIG_UPDATED" then
         C_Timer.After(0.5, function() ns.CheckTalents() end)
 
-    elseif event == "SKILL_LINES_CHANGED" then
-        local now = GetTime()
-        if ns.db.remindProf and now - lastSkill > 2 then
-            lastSkill = now
-            C_Timer.After(0.5, function() ns.Prof.Check() end)
+    elseif event == "SKILL_LINES_CHANGED" or event == "CHAT_MSG_SKILL" or event == "TRADE_SKILL_LIST_UPDATE" then
+        -- wait a moment so several skill-ups in a row are checked once, after the last one
+        if ns.db.remindProf and not ns.profCheckPending then
+            ns.profCheckPending = true
+            C_Timer.After(1.5, function()
+                ns.profCheckPending = false
+                ns.Prof.Check()
+            end)
         end
 
     elseif event == "TRAINER_SHOW" then
