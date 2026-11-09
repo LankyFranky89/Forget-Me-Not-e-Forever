@@ -139,6 +139,40 @@ end
 
 local GOLD, GREY, WHITE = "|cffffd100", "|cffaaaaaa", "|cffffffff"
 
+-- The game's profession book uses a themed fill for each profession's bar.
+-- Borrow it from the book's own bars (once the book has been opened); otherwise use a colour.
+local barLook = {}
+local FALLBACK = {
+    ["Leatherworking"] = { 0.62, 0.42, 0.24 }, ["Skinning"] = { 0.45, 0.75, 0.72 },
+    ["First Aid"] = { 0.2, 0.75, 0.2 }, ["Cooking"] = { 0.85, 0.85, 0.9 },
+    ["Fishing"] = { 0.3, 0.55, 0.9 }, ["Mining"] = { 0.6, 0.6, 0.65 },
+    ["Herbalism"] = { 0.4, 0.75, 0.3 }, ["Blacksmithing"] = { 0.55, 0.55, 0.6 },
+    ["Tailoring"] = { 0.75, 0.5, 0.8 }, ["Alchemy"] = { 0.4, 0.8, 0.5 },
+    ["Enchanting"] = { 0.6, 0.45, 0.9 }, ["Engineering"] = { 0.85, 0.65, 0.25 },
+}
+local function LearnBarLooks()
+    for _, n in ipairs({ "PrimaryProfession1", "PrimaryProfession2", "SecondaryProfession1",
+        "SecondaryProfession2", "SecondaryProfession3", "SecondaryProfession4" }) do
+        local fr = _G[n]
+        local sb = fr and (fr.statusBar or fr.StatusBar)
+        local label = sb and (sb.rankText or sb.RankText)
+        local pname = fr and (fr.professionName or fr.ProfessionName)
+        local key = pname and pname.GetText and pname:GetText()
+        if (not key or key == "") and label and label.GetText then key = (label:GetText() or ""):match("^(.-)%s+%d") end
+        local tex = sb and sb.GetStatusBarTexture and sb:GetStatusBarTexture()
+        if key and key ~= "" and tex then
+            local look = {}
+            local ok, atlas = pcall(tex.GetAtlas, tex)
+            if ok and atlas and atlas ~= "" then look.atlas = atlas else
+                local ok2, file = pcall(tex.GetTexture, tex)
+                if ok2 and file then look.file = file end
+            end
+            look.color = { tex:GetVertexColor() }
+            if look.atlas or look.file then barLook[key] = look end
+        end
+    end
+end
+
 local function BuildText()
     local level = UnitLevel("player")
     local lines = {}
@@ -198,7 +232,7 @@ local function BuildText()
         local idx = { GetProfessions() }
         for i = 1, 6 do
             if idx[i] then
-                local name, _, rank, maxRank = GetProfessionInfo(idx[i])
+                local name, icon, rank, maxRank = GetProfessionInfo(idx[i])
                 if name then
                     any = true
                     local r = recipeSum[name]
@@ -207,7 +241,7 @@ local function BuildText()
                         extra = format("%s%d recipe%s can be learned (%s)|r", GREY, r.count,
                             r.count == 1 and "" or "s", ns.Money(r.cost))
                     end
-                    add("", { bar = { name = name, rank = rank, max = maxRank, extra = extra } })
+                    add("", { bar = { name = name, icon = icon, rank = rank, max = maxRank, extra = extra } })
                 end
             end
         end
@@ -273,6 +307,7 @@ function UI.Refresh()
     end
     local f = UI.panel
     if f and f:IsShown() then
+        pcall(LearnBarLooks)
         local lines, datas = BuildText()
         f.text:Hide()
         f.rows = f.rows or {}
@@ -313,23 +348,42 @@ function UI.Refresh()
                     b.border:SetPoint("BOTTOMRIGHT", 2, -2)
                     b.border:SetBackdrop({ edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 8 })
                     b.border:SetBackdropBorderColor(0.6, 0.6, 0.6)
-                    b.name = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                    b.name:SetPoint("LEFT", 6, 0)
-                    b.val = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                    b.val:SetPoint("RIGHT", -6, 0)
+                    b.label = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                    b.label:SetPoint("CENTER")
+                    b.icon = r:CreateTexture(nil, "ARTWORK")
+                    b.icon:SetSize(20, 20)
+                    b.icon:SetPoint("TOPLEFT", 0, -1)
+                    b:ClearAllPoints()
+                    b:SetPoint("TOPLEFT", 26, -2)
+                    b:SetPoint("TOPRIGHT", -10, -2)
                     r.bar = b
                 end
-                r.bar:SetMinMaxValues(0, math.max(1, d.bar.max))
-                r.bar:SetValue(d.bar.rank)
-                r.bar.name:SetText(d.bar.name)
-                r.bar.val:SetText(format("%d / %d", d.bar.rank, d.bar.max))
-                r.bar:Show()
+                local b = r.bar
+                local look = barLook[d.bar.name]
+                if look and look.atlas then
+                    b:SetStatusBarTexture(look.atlas)
+                    b:GetStatusBarTexture():SetVertexColor(unpack(look.color))
+                elseif look and look.file then
+                    b:SetStatusBarTexture(look.file)
+                    b:GetStatusBarTexture():SetVertexColor(unpack(look.color))
+                else
+                    b:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+                    local c = FALLBACK[d.bar.name] or { 0.25, 0.4, 0.95 }
+                    b:GetStatusBarTexture():SetVertexColor(c[1], c[2], c[3])
+                end
+                b.bg:SetColorTexture(0, 0, 0, 0.85)
+                b:SetMinMaxValues(0, math.max(1, d.bar.max))
+                b:SetValue(d.bar.rank)
+                b.label:SetText(format("%s %d/%d", d.bar.name, d.bar.rank, d.bar.max))
+                b.icon:SetTexture(d.bar.icon)
+                b.icon:Show()
+                b:Show()
                 r.fs:ClearAllPoints()
-                r.fs:SetPoint("TOPLEFT", 8, -24)
+                r.fs:SetPoint("TOPLEFT", 30, -24)
                 r.fs:SetText(d.bar.extra or "")
                 h = 24 + (d.bar.extra and (r.fs:GetStringHeight() + 4) or 2)
             else
-                if r.bar then r.bar:Hide() end
+                if r.bar then r.bar:Hide(); r.bar.icon:Hide() end
                 r.fs:ClearAllPoints()
                 r.fs:SetPoint("TOPLEFT")
                 r.fs:SetText(line == " " and "" or line)
