@@ -232,7 +232,7 @@ local function BuildText()
         local idx = { GetProfessions() }
         for i = 1, 6 do
             if idx[i] then
-                local name, icon, rank, maxRank = GetProfessionInfo(idx[i])
+                local name, icon, rank, maxRank, _, _, skillLine = GetProfessionInfo(idx[i])
                 if name then
                     any = true
                     local r = recipeSum[name]
@@ -241,7 +241,7 @@ local function BuildText()
                         extra = format("%s%d recipe%s can be learned (%s)|r", GREY, r.count,
                             r.count == 1 and "" or "s", ns.Money(r.cost))
                     end
-                    add("", { bar = { name = name, icon = icon, rank = rank, max = maxRank, extra = extra } })
+                    add("", { bar = { name = name, icon = icon, rank = rank, max = maxRank, extra = extra, skillLine = skillLine } })
                 end
             end
         end
@@ -324,9 +324,21 @@ function UI.Refresh()
                 r.hl:SetAllPoints()
                 r.hl:SetColorTexture(1, 0.82, 0, 0.10)
                 r:SetScript("OnEnter", function(self)
-                    if self.data and ns.Nearby.EntryTooltip then ns.Nearby.EntryTooltip(self) end
+                    if self.barData then
+                        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                        GameTooltip:AddLine(self.barData.name, 1, 0.82, 0)
+                        GameTooltip:AddLine("Click to open", 0.7, 0.7, 0.7)
+                        GameTooltip:Show()
+                    elseif self.data and ns.Nearby.EntryTooltip then
+                        ns.Nearby.EntryTooltip(self)
+                    end
                 end)
                 r:SetScript("OnLeave", function() GameTooltip:Hide() end)
+                r:RegisterForClicks("LeftButtonUp")
+                r:SetScript("OnClick", function(self)
+                    local b = self.barData
+                    if b then UI.OpenProfession(b) end
+                end)
                 f.rows[i] = r
             end
             local d = datas[i]
@@ -393,7 +405,8 @@ function UI.Refresh()
             r:ClearAllPoints()
             r:SetPoint("TOPLEFT", f.child, "TOPLEFT", 0, -y)
             r.data = (d and not d.bar) and d or nil
-            r:EnableMouse(r.data ~= nil)
+            r.barData = d and d.bar or nil
+            r:EnableMouse(r.data ~= nil or r.barData ~= nil)
             r:Show()
             y = y + h
         end
@@ -485,6 +498,24 @@ function UI.ToggleNotes()
     f:Show()
     f.edit:SetFocus()
     f.edit:SetCursorPosition(#(ns.char.notes or ""))
+end
+
+-- Open a profession's window (or the profession book for gathering skills)
+function UI.OpenProfession(b)
+    if InCombatLockdown() then
+        ns.Print("Can't open professions in combat.")
+        return
+    end
+    if b.skillLine and C_TradeSkillUI and C_TradeSkillUI.OpenTradeSkill then
+        local ok, res = pcall(C_TradeSkillUI.OpenTradeSkill, b.skillLine)
+        if ok and res ~= false then return end
+    end
+    -- no crafting window (e.g. Skinning): open the profession book instead
+    if ToggleProfessionsBook then
+        pcall(ToggleProfessionsBook)
+    elseif ToggleSpellBook then
+        pcall(ToggleSpellBook, BOOKTYPE_PROFESSION)
+    end
 end
 
 function UI.TogglePanel()
