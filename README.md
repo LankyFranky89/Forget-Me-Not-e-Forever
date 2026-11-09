@@ -22,6 +22,7 @@ Talk to your class trainer once. The addon reads every spell, rank, level and co
 - Recipes waiting: the panel lists every recipe you have the skill for but haven't bought, with prices; ones you can't afford are shown in red. "What can I learn?" window (spells + recipes) opens anywhere: button in the panel, Shift-click the minimap button, or /fmn recipes.
 - Inn reminder: entering an inn that isn't your hearthstone spot reminds you to bind it there (once per place per session).
 - Flight paths: entering a zone with a flight path you haven't learned tells you, with a waypoint in the to-do list. /fmn flights shows what the game reports.
+- My notes: a notepad in the panel (or /fmn notes), saved per character.
 - Class quests for all nine classes (from Forever quest guides): abilities like stances, forms, demons and racial priest spells, plus key weapon quests. Skip one with /fmn skip <quest name>.
 - Minimap button: left-click opens the panel, right-click opens the to-do list, drag to move.
 

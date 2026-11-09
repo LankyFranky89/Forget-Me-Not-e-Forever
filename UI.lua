@@ -80,7 +80,7 @@ end
 -- Overview panel -------------------------------------------------------------
 local function CreatePanel()
     local f = ns.MakeWindow("ForgetMeNotPanel")
-    f:SetSize(440, 480)
+    f:SetSize(520, 480)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
     f:SetMovable(true)
@@ -116,6 +116,12 @@ local function CreatePanel()
     rec:SetSize(140, 22)
     rec:SetText("What can I learn?")
     rec:SetScript("OnClick", function() ns.Nearby.ShowRecipes(nil) end)
+
+    local notes = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    notes:SetSize(100, 22)
+    notes:SetPoint("LEFT", rec, "RIGHT", 6, 0)
+    notes:SetText("My notes")
+    notes:SetScript("OnClick", function() UI.ToggleNotes() end)
 
     local list = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     list:SetSize(110, 22)
@@ -298,6 +304,91 @@ function UI.Refresh()
         for i = #lines + 1, #f.rows do f.rows[i]:Hide() end
         f.child:SetHeight(y + 10)
     end
+end
+
+-- My notes: a free-text notepad, saved per character -----------------------------
+local function CreateNotes()
+    local f = ns.MakeWindow("ForgetMeNotNotesFrame")
+    f:SetSize(380, 340)
+    f:SetFrameStrata("DIALOG")
+    f:SetClampedToScreen(true)
+    f:SetMovable(true)
+    f:EnableMouse(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    f.TitleText:SetText("My notes – " .. (UnitName("player") or ""))
+    tinsert(UISpecialFrames, "ForgetMeNotNotesFrame")
+
+    local bg = f:CreateTexture(nil, "BACKGROUND", nil, 1)
+    bg:SetPoint("TOPLEFT", 12, -32)
+    bg:SetPoint("BOTTOMRIGHT", -12, 34)
+    bg:SetColorTexture(0, 0, 0, 0.35)
+
+    local sf = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+    sf:SetPoint("TOPLEFT", 16, -36)
+    sf:SetPoint("BOTTOMRIGHT", -34, 38)
+    local eb = CreateFrame("EditBox", nil, sf)
+    eb:SetMultiLine(true)
+    eb:SetAutoFocus(false)
+    eb:SetFontObject("ChatFontNormal")
+    eb:SetWidth(320)
+    eb:SetMaxLetters(5000)
+    eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    eb:SetScript("OnTextChanged", function(self, userInput)
+        if userInput then ns.char.notes = self:GetText() end
+        sf:UpdateScrollChildRect()
+    end)
+    eb:SetScript("OnCursorChanged", function(self, x, y, w, h)
+        -- keep the cursor in view while typing
+        local top, height = sf:GetVerticalScroll(), sf:GetHeight()
+        y = -y
+        if y < top then sf:SetVerticalScroll(y)
+        elseif y + h > top + height then sf:SetVerticalScroll(y + h - height) end
+    end)
+    sf:SetScrollChild(eb)
+    -- clicking anywhere in the box starts typing
+    sf:EnableMouse(true)
+    sf:SetScript("OnMouseDown", function() eb:SetFocus() end)
+    f.edit = eb
+
+    local hint = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    hint:SetPoint("BOTTOMLEFT", 16, 14)
+    hint:SetText("Saved automatically for this character.")
+
+    local clear = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    clear:SetSize(80, 22)
+    clear:SetPoint("BOTTOMRIGHT", -12, 8)
+    clear:SetText("Clear")
+    clear:SetScript("OnClick", function() StaticPopup_Show("FORGETMENOT_CLEARNOTES") end)
+
+    StaticPopupDialogs["FORGETMENOT_CLEARNOTES"] = {
+        text = "Delete all your notes for this character?",
+        button1 = YES, button2 = NO, timeout = 0, hideOnEscape = true,
+        OnAccept = function() ns.char.notes = ""; eb:SetText("") end,
+    }
+    UI.notes = f
+    return f
+end
+
+function UI.ToggleNotes()
+    local f = UI.notes or CreateNotes()
+    if f:IsShown() then f:Hide() return end
+    f.edit:SetText(ns.char.notes or "")
+    f:ClearAllPoints()
+    local panel = UI.panel
+    if panel and panel:IsShown() then
+        if (panel:GetLeft() or 0) > 400 then
+            f:SetPoint("TOPRIGHT", panel, "TOPLEFT", -8, 0)
+        else
+            f:SetPoint("TOPLEFT", panel, "TOPRIGHT", 8, 0)
+        end
+    else
+        f:SetPoint("CENTER")
+    end
+    f:Show()
+    f.edit:SetFocus()
+    f.edit:SetCursorPosition(#(ns.char.notes or ""))
 end
 
 function UI.TogglePanel()
