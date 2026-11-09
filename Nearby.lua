@@ -46,6 +46,69 @@ local function FindTrainer(match)
     return best
 end
 
+-- Undiscovered flight paths in the zone you're in --------------------------------
+local function PlayerFaction()
+    local f = UnitFactionGroup("player")
+    if not Enum or not Enum.FlightPathFaction then return nil end
+    return f == "Horde" and Enum.FlightPathFaction.Horde or Enum.FlightPathFaction.Alliance
+end
+
+-- Returns { name, mapID, x, y } for flight paths on this zone's map you haven't learned
+function N.UnknownFlightPaths()
+    local out = {}
+    if not (C_TaxiMap and C_TaxiMap.GetTaxiNodesForMap and C_Map and Enum and Enum.FlightPathState) then return out end
+    local mapID = C_Map.GetBestMapForUnit("player")
+    if not mapID then return out end
+    -- climb to the zone map, so a city district still finds the zone's flight master
+    local info = C_Map.GetMapInfo(mapID)
+    while info and info.mapType and Enum.UIMapType and info.mapType > Enum.UIMapType.Zone and info.parentMapID and info.parentMapID > 0 do
+        mapID = info.parentMapID
+        info = C_Map.GetMapInfo(mapID)
+    end
+    local ok, nodes = pcall(C_TaxiMap.GetTaxiNodesForMap, mapID)
+    if not ok or type(nodes) ~= "table" then return out end
+    local mine = PlayerFaction()
+    for _, n in ipairs(nodes) do
+        local factionOK = (n.faction == nil) or (n.faction == Enum.FlightPathFaction.Neutral) or (mine and n.faction == mine)
+        if n.state == Enum.FlightPathState.Unreachable and factionOK and n.position then
+            local x, y = n.position.x, n.position.y
+            if n.position.GetXY then x, y = n.position:GetXY() end
+            out[#out + 1] = { name = n.name, mapID = mapID, x = x, y = y, zone = GetRealZoneText() }
+        end
+    end
+    return out
+end
+
+local fpSeen = {}
+function N.CheckFlightPaths()
+    if not ns.db or not ns.db.remindFlight then return end
+    for _, fp in ipairs(N.UnknownFlightPaths()) do
+        if not fpSeen[fp.name] then
+            fpSeen[fp.name] = true
+            ns.Print(format("New flight path nearby: %s – talk to the flight master to learn it. (Waypoint in the to-do list)", fp.name))
+            if UIErrorsFrame then UIErrorsFrame:AddMessage("Undiscovered flight path: " .. fp.name, 0.4, 0.8, 1) end
+        end
+    end
+end
+
+-- /fmn flights: what the game reports for this zone
+function N.DebugFlights()
+    if not (C_TaxiMap and C_TaxiMap.GetTaxiNodesForMap) then
+        ns.Print("This client has no flight path map data for addons.")
+        return
+    end
+    local mapID = C_Map.GetBestMapForUnit("player")
+    local ok, nodes = pcall(C_TaxiMap.GetTaxiNodesForMap, mapID)
+    ns.Print(format("Map %s: %s", tostring(mapID), ok and (type(nodes) == "table" and (#nodes .. " flight path(s)") or "none") or "error"))
+    if ok and type(nodes) == "table" then
+        for _, n in ipairs(nodes) do
+            ns.Print(format("  %s · state %s · faction %s", tostring(n.name), tostring(n.state), tostring(n.faction)))
+        end
+    end
+    local unknown = N.UnknownFlightPaths()
+    ns.Print(#unknown .. " undiscovered for you in this zone.")
+end
+
 -- Everything you could do at a trainer right now
 function N.BuildTasks()
     local tasks = {}
@@ -83,6 +146,11 @@ function N.BuildTasks()
                 detail = format("%d new recipe(s) · %s", r.count, ns.Money(r.cost)),
                 trainer = FindTrainer(function(t) return t.kind == "profession" and t.prof == r.name end),
             }
+        end
+    end
+    if ns.db.remindFlight then
+        for _, fp in ipairs(N.UnknownFlightPaths()) do
+            tasks[#tasks + 1] = { title = "Flight path", detail = fp.name .. " – not learned yet", trainer = fp }
         end
     end
     if ns.db.remindQuests then
@@ -376,6 +444,7 @@ function N.ShowRecipes(prof)
 end
 
 function N.OnZone()
+    C_Timer.After(1, N.CheckFlightPaths)
     if not ns.db or not ns.db.remindCity then return end
     local zone = GetRealZoneText()
     if zone and (N.CAPITALS[zone] or ns.db.cities[zone]) and not hiddenZone[zone] then

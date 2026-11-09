@@ -10,7 +10,8 @@ local DEFAULTS = {
     remindNear    = true,   -- show the to-do list when close to a trainer you need
     remindProf    = true,   -- profession reminders
     remindCapCraft = false, -- warn on every craft/gather while a profession is capped (off: to-do list only)
-    remindInn     = true,   -- remind to bind your hearthstone at a new inn
+    remindInn     = true,
+    remindFlight  = true,   -- undiscovered flight paths in your zone   -- remind to bind your hearthstone at a new inn
     remindQuests  = true,   -- class quests
     remindTalents = true,   -- unspent talent points
     remindRecipes = true,   -- new profession recipes at the trainer
@@ -440,6 +441,8 @@ SlashCmdList.FORGETMENOT = function(input)
     elseif cmd == "talents" then
         ns.DebugTalents()
         ns.CheckTalents()
+    elseif cmd == "flights" then
+        ns.Nearby.DebugFlights()
     elseif cmd == "dump" then
         ns.Trainer.Dump()
     elseif cmd == "alts" then

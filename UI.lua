@@ -313,6 +313,7 @@ local CHECKS = {
     { "remindProf",    "Profession reminders" },
     { "remindCapCraft", "Warn every time I craft or gather while a profession is capped" },
     { "remindInn",     "Remind me to bind my hearthstone when I enter an inn" },
+    { "remindFlight",  "Remind me about undiscovered flight paths in my zone" },
     { "remindQuests",  "Remind me about class quests" },
     { "remindTalents", "Remind me about unspent talent points" },
     { "remindRecipes", "Remind me about new profession recipes at the trainer" },
