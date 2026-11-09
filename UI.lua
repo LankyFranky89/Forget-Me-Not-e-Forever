@@ -544,16 +544,16 @@ local CHECKS = {
 }
 
 local function Stepper(parent, label, key, step, min, max, anchor, y)
-    local t = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    t:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, y)
+    local t = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    t:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 2, y)
     local function update() t:SetText(format(label, ns.db[key])) end
     local minus = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-    minus:SetSize(26, 22)
+    minus:SetSize(22, 18)
     minus:SetPoint("LEFT", t, "RIGHT", 10, 0)
     minus:SetText("-")
     minus:SetScript("OnClick", function() ns.db[key] = math.max(min, ns.db[key] - step); update() end)
     local plus = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-    plus:SetSize(26, 22)
+    plus:SetSize(22, 18)
     plus:SetPoint("LEFT", minus, "RIGHT", 4, 0)
     plus:SetText("+")
     plus:SetScript("OnClick", function() ns.db[key] = math.min(max, ns.db[key] + step); update() end)
@@ -572,8 +572,9 @@ local function CreateOptions()
     local boxes = {}
     for i, c in ipairs(CHECKS) do
         local cb = CreateFrame("CheckButton", nil, p, "UICheckButtonTemplate")
-        cb:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, i == 1 and -12 or -2)
-        local label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        cb:SetSize(20, 20)
+        cb:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, i == 1 and -8 or 0)
+        local label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         label:SetPoint("LEFT", cb, "RIGHT", 4, 0)
         label:SetText(c[2])
         cb:SetScript("OnClick", function(self) ns.db[c[1]] = self:GetChecked() and true or false; UI.Refresh() end)
@@ -581,8 +582,8 @@ local function CreateOptions()
         boxes[#boxes + 1] = cb
         last = cb
     end
-    local yards = Stepper(p, "Trainer distance: %d yards", "nearYards", 10, 10, 100, last, -16)
-    local warn = Stepper(p, "Warn %d points before a profession cap", "profWarn", 1, 0, 25, yards, -16)
+    local yards = Stepper(p, "Trainer distance: %d yards", "nearYards", 10, 10, 100, last, -10)
+    local warn = Stepper(p, "Warn %d points before a profession cap", "profWarn", 1, 0, 25, yards, -10)
 
     p:SetScript("OnShow", function()
         for _, cb in ipairs(boxes) do cb:SetChecked(ns.db[cb.key]) end
