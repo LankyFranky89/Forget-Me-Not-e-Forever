@@ -12,7 +12,7 @@ local DEFAULTS = {
     remindCapCraft = false, -- warn on every craft/gather while a profession is capped (off: to-do list only)
     remindInn     = true,
     remindSupplies = true,  -- food and drink
-    supplyLow     = 0,      -- warn when you have this many or fewer
+    supplyLow     = 20,     -- warn when you have this many or fewer (about one stack)
     remindDeparture = true, -- "Before you leave" window at flight masters and on Hearthstone
     remindFlight  = true,   -- undiscovered flight paths in your zone   -- remind to bind your hearthstone at a new inn
     remindQuests  = true,   -- class quests
@@ -338,6 +338,11 @@ f:SetScript("OnEvent", function(_, event, arg1)
         ApplyDefaults(ForgetMeNotDB, DEFAULTS)
         ApplyDefaults(ForgetMeNotCharDB, CHAR_DEFAULTS)
         ns.db, ns.char = ForgetMeNotDB, ForgetMeNotCharDB
+        -- 0.18.1: supply warning at 20 (one stack) instead of 0
+        if not ns.db.supplyLow20 then
+            ns.db.supplyLow = 20
+            ns.db.supplyLow20 = true
+        end
         -- 0.8.4: per-craft cap warning is now off by default
         if not ns.db.capCraftDefaultOff then
             ns.db.remindCapCraft = false
@@ -545,15 +550,19 @@ function ns.CountSupplies()
     return food, drink
 end
 
--- What you're out of: list of "food" / "drinks"
+-- What you're low on: list of "food" / "drinks", plus a readable text for each
 function ns.MissingSupplies()
-    if not ns.db.remindSupplies then return {} end
+    if not ns.db.remindSupplies then return {}, {} end
     local food, drink = ns.CountSupplies()
-    if not food then return {} end
-    local out = {}
-    if food <= ns.db.supplyLow then out[#out + 1] = "food" end
-    if ns.UsesMana() and drink <= ns.db.supplyLow then out[#out + 1] = "drinks" end
-    return out, food, drink
+    if not food then return {}, {} end
+    local out, text = {}, {}
+    local function add(kind, n)
+        out[#out + 1] = kind
+        text[#text + 1] = n == 0 and ("out of " .. kind) or format("only %d %s left", n, kind)
+    end
+    if food <= ns.db.supplyLow then add("food", food) end
+    if ns.UsesMana() and drink <= ns.db.supplyLow then add("drinks", drink) end
+    return out, text
 end
 
 do
@@ -569,20 +578,21 @@ do
             pending = true
             C_Timer.After(1, function()
                 pending = false
-                local missing = ns.MissingSupplies()
+                local missing, text = ns.MissingSupplies()
                 local now = {}
-                for _, m in ipairs(missing) do
-                    now[m] = true
-                    if not last[m] then
-                        ns.Print(format("You're out of %s! Buy some at the next vendor.", m))
-                        if UIErrorsFrame then UIErrorsFrame:AddMessage("Out of " .. m .. "!", 1, 0.6, 0.2) end
+                for i, m in ipairs(missing) do
+                    local empty = text[i]:find("^out of") ~= nil
+                    now[m] = empty and "out" or "low"
+                    if last[m] ~= now[m] then
+                        ns.Print(format("You have %s! Buy more at the next vendor.", text[i]))
+                        if UIErrorsFrame then UIErrorsFrame:AddMessage(text[i]:gsub("^%l", string.upper) .. "!", 1, 0.6, 0.2) end
                     end
                 end
                 last = now
             end)
         elseif event == "MERCHANT_SHOW" then
             C_Timer.After(0.3, function()
-                local missing = ns.MissingSupplies()
+                local missing, text = ns.MissingSupplies()
                 if #missing == 0 or not (GetMerchantNumItems and GetMerchantItemID) then return end
                 local want = {}
                 for _, m in ipairs(missing) do want[m] = true end
@@ -596,7 +606,7 @@ do
                     end
                 end
                 if #found > 0 then
-                    ns.Print(format("You're out of %s – this vendor sells: %s", table.concat(missing, " and "), table.concat(found, ", ")))
+                    ns.Print(format("You have %s – this vendor sells: %s", table.concat(text, " and "), table.concat(found, ", ")))
                 end
             end)
         end

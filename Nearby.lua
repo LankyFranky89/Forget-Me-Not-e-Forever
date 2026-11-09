@@ -148,9 +148,9 @@ function N.BuildTasks()
             }
         end
     end
-    local miss = ns.MissingSupplies()
+    local miss, mtext = ns.MissingSupplies()
     if #miss > 0 then
-        tasks[#tasks + 1] = { title = "Supplies", detail = "Out of " .. table.concat(miss, " and ") .. " – visit a food & drink vendor" }
+        tasks[#tasks + 1] = { title = "Supplies", detail = "You have " .. table.concat(mtext, " and ") .. " – visit a food & drink vendor" }
     end
     if ns.db.remindFlight then
         for _, fp in ipairs(N.UnknownFlightPaths()) do
@@ -524,9 +524,9 @@ function N.DepartureItems(forHearth)
                 detail = format("Learn %s %s before you go", e.rule.next, e.name) }
         end
     end
-    local missing = ns.MissingSupplies()
+    local missing, stext = ns.MissingSupplies()
     if #missing > 0 then
-        items[#items + 1] = { title = "Supplies", detail = "You're out of " .. table.concat(missing, " and ") .. " – buy some before you go" }
+        items[#items + 1] = { title = "Supplies", detail = "You have " .. table.concat(stext, " and ") .. " – buy more before you go" }
     end
     if not forHearth and ns.db.remindInn and IsResting() and GetBindLocation then
         local bind = GetBindLocation() or ""
