@@ -550,6 +550,33 @@ function ns.CountSupplies()
     return food, drink
 end
 
+-- Standard vendor food/drink by level (bread as the food example; any vendor food of the same level is equal)
+local TIERS = {
+    { lvl = 45, food = "Homemade Cherry Pie",  drink = "Morning Glory Dew" },
+    { lvl = 35, food = "Soft Banana Bread",    drink = "Moonberry Juice" },
+    { lvl = 25, food = "Mulgore Spice Bread",  drink = "Sweet Nectar" },
+    { lvl = 15, food = "Moist Cornbread",      drink = "Melon Juice" },
+    { lvl = 5,  food = "Freshly Baked Bread",  drink = "Ice Cold Milk" },
+    { lvl = 1,  food = "Tough Hunk of Bread",  drink = "Refreshing Spring Water" },
+}
+function ns.SupplyTier(level)
+    level = level or UnitLevel("player")
+    for _, t in ipairs(TIERS) do if level >= t.lvl then return t end end
+    return TIERS[#TIERS]
+end
+
+-- "buy Melon Juice / Moist Cornbread (level 15)" for what you're missing
+function ns.SupplyTip(missing)
+    local t = ns.SupplyTier()
+    local names = {}
+    for _, m in ipairs(missing) do
+        if m == "food" then names[#names + 1] = t.food end
+        if m == "drinks" then names[#names + 1] = t.drink end
+    end
+    if #names == 0 then return "" end
+    return format(" – best for your level: %s (level %d)", table.concat(names, " and "), t.lvl)
+end
+
 -- What you're low on: list of "food" / "drinks", plus a readable text for each
 function ns.MissingSupplies()
     if not ns.db.remindSupplies then return {}, {} end
@@ -584,7 +611,7 @@ do
                     local empty = text[i]:find("^out of") ~= nil
                     now[m] = empty and "out" or "low"
                     if last[m] ~= now[m] then
-                        ns.Print(format("You have %s! Buy more at the next vendor.", text[i]))
+                        ns.Print(format("You have %s! Buy more at the next vendor%s.", text[i], ns.SupplyTip({ m })))
                         if UIErrorsFrame then UIErrorsFrame:AddMessage(text[i]:gsub("^%l", string.upper) .. "!", 1, 0.6, 0.2) end
                     end
                 end
@@ -596,17 +623,37 @@ do
                 if #missing == 0 or not (GetMerchantNumItems and GetMerchantItemID) then return end
                 local want = {}
                 for _, m in ipairs(missing) do want[m] = true end
-                local found = {}
+                -- pick the best item for your level: highest required level you can use
+                local level = UnitLevel("player")
+                local best = {}   -- "food"/"drinks" -> { name, req, index }
                 for i = 1, GetMerchantNumItems() do
                     local id = GetMerchantItemID(i)
                     local k = id and ClassifyItem(id)
-                    if k and ((want.food and (k == "food" or k == "both")) or (want.drinks and (k == "drink" or k == "both"))) then
-                        local name = C_Item.GetItemNameByID and C_Item.GetItemNameByID(id) or ("item " .. id)
-                        found[#found + 1] = name
+                    if k then
+                        local name, _, _, _, req = C_Item.GetItemInfo(id)
+                        name = name or (C_Item.GetItemNameByID and C_Item.GetItemNameByID(id)) or ("item " .. id)
+                        req = req or 0
+                        if req <= level then
+                            for _, m in ipairs({ "food", "drinks" }) do
+                                local fits = (m == "food" and (k == "food" or k == "both")) or (m == "drinks" and (k == "drink" or k == "both"))
+                                if want[m] and fits and (not best[m] or req > best[m].req) then
+                                    best[m] = { name = name, req = req, link = GetMerchantItemLink and GetMerchantItemLink(i) }
+                                end
+                            end
+                        end
                     end
                 end
-                if #found > 0 then
-                    ns.Print(format("You have %s – this vendor sells: %s", table.concat(text, " and "), table.concat(found, ", ")))
+                local tier = ns.SupplyTier(level)
+                local parts = {}
+                for _, m in ipairs({ "food", "drinks" }) do
+                    local b = best[m]
+                    if b then
+                        local note = b.req < tier.lvl and " |cffff8800(below your level – a better one is sold elsewhere)|r" or ""
+                        parts[#parts + 1] = format("%s: %s%s", m, b.link or b.name, note)
+                    end
+                end
+                if #parts > 0 then
+                    ns.Print(format("You have %s – buy here: %s", table.concat(text, " and "), table.concat(parts, ", ")))
                 end
             end)
         end
