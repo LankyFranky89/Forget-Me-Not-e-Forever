@@ -18,7 +18,7 @@ local function CreateMinimapButton()
     b:SetSize(31, 31)
     b:SetFrameStrata("MEDIUM")
     b:SetFrameLevel(8)
-    b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    b:RegisterForClicks("LeftButtonUp", "RightButtonUp", "MiddleButtonUp")
     b:RegisterForDrag("LeftButton")
     b:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
 
@@ -45,7 +45,9 @@ local function CreateMinimapButton()
     end)
     b:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
     b:SetScript("OnClick", function(_, button)
-        if button == "RightButton" then
+        if button == "MiddleButton" then
+            UI.ToggleNotes()
+        elseif button == "RightButton" then
             ns.Nearby.ShowList(true)
         elseif IsShiftKeyDown() then
             ns.Nearby.ShowRecipes(nil)
@@ -69,6 +71,7 @@ local function CreateMinimapButton()
         GameTooltip:AddLine("Left-click: open panel", 0.7, 0.7, 0.7)
         GameTooltip:AddLine("Right-click: to-do list", 0.7, 0.7, 0.7)
         GameTooltip:AddLine("Shift-click: what can I learn?", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Middle-click: my notes", 0.7, 0.7, 0.7)
         GameTooltip:AddLine("Drag: move button", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
