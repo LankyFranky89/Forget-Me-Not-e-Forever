@@ -217,6 +217,14 @@ local function RowTooltip(row)
     if d.link then
         shown = pcall(GameTooltip.SetHyperlink, GameTooltip, d.link)
     end
+    -- class spells: try the game's own spell tooltip
+    if not shown and d.isSpell and C_Spell and C_Spell.GetSpellInfo and GameTooltip.SetSpellByID then
+        local ok, info = pcall(C_Spell.GetSpellInfo, d.name)
+        if ok and info and info.spellID then
+            shown = pcall(GameTooltip.SetSpellByID, GameTooltip, info.spellID)
+            if shown and d.rank and d.rank ~= "" then GameTooltip:AddLine(d.rank .. " (from trainer)", 1, 0.82, 0) end
+        end
+    end
     if not shown then
         GameTooltip:ClearLines()
         GameTooltip:AddLine(d.name .. ((d.rank and d.rank ~= "") and (" (" .. d.rank .. ")") or ""), 1, 0.82, 0)
@@ -231,6 +239,8 @@ local function RowTooltip(row)
     end
     GameTooltip:Show()
 end
+
+N.EntryTooltip = RowTooltip
 
 local function GetRow(f, i)
     local row = f.rows[i]

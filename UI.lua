@@ -133,7 +133,11 @@ local GOLD, GREY, WHITE = "|cffffd100", "|cffaaaaaa", "|cffffffff"
 local function BuildText()
     local level = UnitLevel("player")
     local lines = {}
-    local function add(s) lines[#lines + 1] = s end
+    local datas = {}
+    local function add(s, data)
+        lines[#lines + 1] = s
+        datas[#lines] = data
+    end
 
     local className = UnitClass("player")
     add(format("%s%s|r  %s(%s %d)|r", WHITE, UnitName("player"), GREY, className, level))
@@ -145,7 +149,9 @@ local function BuildText()
         local list, cost = ns.GetAvailable(level)
         if #list == 0 then add(GREY .. "Nothing new.|r") end
         for _, s in ipairs(list) do
-            add(format("%s  %s(lvl %d · %s)|r", ns.SpellLabel(s), GREY, s.level, ns.Money(s.cost)))
+            s.isSpell = true
+            local icon = s.icon and format("|T%s:14:14|t ", tostring(s.icon)) or ""
+            add(format("%s%s  %s(lvl %d · %s)|r", icon, ns.SpellLabel(s), GREY, s.level, ns.Money(s.cost)), s)
         end
         if #list > 0 then add(WHITE .. "Total: " .. ns.Money(cost) .. "|r") end
 
@@ -154,7 +160,9 @@ local function BuildText()
         local up = ns.GetUpcoming(level, 10)
         if #up == 0 then add(GREY .. "Nothing in the next 10 levels.|r") end
         for _, s in ipairs(up) do
-            add(format("%sLevel %d|r  %s", GREY, s.level, ns.SpellLabel(s)))
+            s.isSpell = true
+            local icon = s.icon and format("|T%s:14:14|t ", tostring(s.icon)) or ""
+            add(format("%sLevel %d|r  %s%s", GREY, s.level, icon, ns.SpellLabel(s)), s)
         end
     end
 
@@ -244,7 +252,7 @@ local function BuildText()
         add(GOLD .. "Skipped|r " .. GREY .. "(/tn unskip <spell>)|r")
         for _, k in ipairs(skipped) do add(GREY .. k .. "|r") end
     end
-    return table.concat(lines, "\n")
+    return lines, datas
 end
 
 function UI.Refresh()
@@ -256,8 +264,39 @@ function UI.Refresh()
     end
     local f = UI.panel
     if f and f:IsShown() then
-        f.text:SetText(BuildText())
-        f.child:SetHeight(f.text:GetStringHeight() + 10)
+        local lines, datas = BuildText()
+        f.text:Hide()
+        f.rows = f.rows or {}
+        local y = 0
+        for i, line in ipairs(lines) do
+            local r = f.rows[i]
+            if not r then
+                r = CreateFrame("Button", nil, f.child)
+                r.fs = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+                r.fs:SetPoint("TOPLEFT")
+                r.fs:SetWidth(390)
+                r.fs:SetJustifyH("LEFT")
+                r.hl = r:CreateTexture(nil, "HIGHLIGHT")
+                r.hl:SetAllPoints()
+                r.hl:SetColorTexture(1, 0.82, 0, 0.10)
+                r:SetScript("OnEnter", function(self)
+                    if self.data and ns.Nearby.EntryTooltip then ns.Nearby.EntryTooltip(self) end
+                end)
+                r:SetScript("OnLeave", function() GameTooltip:Hide() end)
+                f.rows[i] = r
+            end
+            r.fs:SetText(line == " " and "" or line)
+            local h = math.max(r.fs:GetStringHeight(), 8) + 3
+            r:SetSize(390, h)
+            r:ClearAllPoints()
+            r:SetPoint("TOPLEFT", f.child, "TOPLEFT", 0, -y)
+            r.data = datas[i]
+            r:EnableMouse(datas[i] ~= nil)
+            r:Show()
+            y = y + h
+        end
+        for i = #lines + 1, #f.rows do f.rows[i]:Hide() end
+        f.child:SetHeight(y + 10)
     end
 end
 
