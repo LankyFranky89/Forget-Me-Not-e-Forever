@@ -480,8 +480,6 @@ SlashCmdList.FORGETMENOT = function(input)
         ns.Nearby.DebugFlights()
     elseif cmd == "notes" then
         ns.UI.ToggleNotes()
-    elseif cmd == "bars" then
-        ns.UI.DebugBars()
     elseif cmd == "dump" then
         ns.Trainer.Dump()
     elseif cmd == "alts" then

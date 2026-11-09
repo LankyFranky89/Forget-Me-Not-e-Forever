@@ -150,72 +150,27 @@ local FALLBACK = {
     ["Tailoring"] = { 0.75, 0.5, 0.8 }, ["Alchemy"] = { 0.4, 0.8, 0.5 },
     ["Enchanting"] = { 0.6, 0.45, 0.9 }, ["Engineering"] = { 0.85, 0.65, 0.25 },
 }
--- Walk any open/loaded profession window and remember each bar's texture by its label
--- ("Leatherworking 71/150"), so our bars can use the exact same fill.
-local BOOK_FRAMES = { "ProfessionsBookFrame", "SpellBookFrame", "PlayerSpellsFrame", "ProfessionsFrame" }
-
-local function LabelOf(bar)
-    for _, region in ipairs({ bar:GetRegions() }) do
-        if region.GetText and region:GetObjectType() == "FontString" then
-            local name = (region:GetText() or ""):match("^(.-)%s+%d+%s*/%s*%d+$")
-            if name and name ~= "" then return name end
-        end
-    end
-    for _, child in ipairs({ bar:GetChildren() }) do
-        for _, region in ipairs({ child:GetRegions() }) do
-            if region.GetText and region:GetObjectType() == "FontString" then
-                local name = (region:GetText() or ""):match("^(.-)%s+%d+%s*/%s*%d+$")
-                if name and name ~= "" then return name end
-            end
-        end
-    end
-end
-
-local function Walk(frame, depth, found)
-    if depth > 8 or not frame then return end
-    if frame.GetObjectType and frame:GetObjectType() == "StatusBar" then
-        local name = LabelOf(frame)
-        local tex = frame:GetStatusBarTexture()
-        if name and tex then
+local function LearnBarLooks()
+    for _, n in ipairs({ "PrimaryProfession1", "PrimaryProfession2", "SecondaryProfession1",
+        "SecondaryProfession2", "SecondaryProfession3", "SecondaryProfession4" }) do
+        local fr = _G[n]
+        local sb = fr and (fr.statusBar or fr.StatusBar)
+        local label = sb and (sb.rankText or sb.RankText)
+        local pname = fr and (fr.professionName or fr.ProfessionName)
+        local key = pname and pname.GetText and pname:GetText()
+        if (not key or key == "") and label and label.GetText then key = (label:GetText() or ""):match("^(.-)%s+%d") end
+        local tex = sb and sb.GetStatusBarTexture and sb:GetStatusBarTexture()
+        if key and key ~= "" and tex then
             local look = {}
             local ok, atlas = pcall(tex.GetAtlas, tex)
-            if ok and atlas and atlas ~= "" then look.atlas = atlas
-            else
+            if ok and atlas and atlas ~= "" then look.atlas = atlas else
                 local ok2, file = pcall(tex.GetTexture, tex)
                 if ok2 and file then look.file = file end
             end
             look.color = { tex:GetVertexColor() }
-            if look.atlas or look.file then found[name] = look end
+            if look.atlas or look.file then barLook[key] = look end
         end
     end
-    if frame.GetChildren then
-        for _, child in ipairs({ frame:GetChildren() }) do Walk(child, depth + 1, found) end
-    end
-end
-
-local function LearnBarLooks()
-    for _, n in ipairs(BOOK_FRAMES) do
-        if _G[n] then
-            local found = {}
-            Walk(_G[n], 0, found)
-            for k, v in pairs(found) do
-                barLook[k] = v
-                ns.db.barLooks = ns.db.barLooks or {}
-                ns.db.barLooks[k] = v      -- keep for next sessions
-            end
-        end
-    end
-end
-
--- /fmn bars: what was found
-function UI.DebugBars()
-    pcall(LearnBarLooks)
-    local any = false
-    for k, v in pairs(barLook) do
-        any = true
-        ns.Print(format("%s: %s", k, v.atlas and ("atlas " .. v.atlas) or ("file " .. tostring(v.file))))
-    end
-    if not any then ns.Print("No profession bars found. Open your profession book (the window with the bars), then type /fmn bars again.") end
 end
 
 local function BuildText()
@@ -772,13 +727,6 @@ function UI.TalentBubble(n)
 end
 
 function UI.Init()
-    for k, v in pairs(ns.db.barLooks or {}) do barLook[k] = v end
-    -- learn the look whenever a profession window closes/opens
-    for _, n in ipairs(BOOK_FRAMES) do
-        if _G[n] and _G[n].HookScript then
-            _G[n]:HookScript("OnShow", function() C_Timer.After(0.5, function() pcall(LearnBarLooks); UI.Refresh() end) end)
-        end
-    end
     CreatePanel()
     CreateOptions()
     if not ns.db.minimap.hide then CreateMinimapButton() end
