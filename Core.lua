@@ -281,6 +281,9 @@ function ns.CheckInn()
     local bind = GetBindLocation and GetBindLocation() or ""
     local sub, zone = GetSubZoneText() or "", GetRealZoneText() or ""
     if bind == "" or bind == sub or bind == zone then return end
+    -- the place where you last bound (saved when you bind), in case its name differs from the bind name
+    local spot = ns.char.bindSpot
+    if spot and spot.bind == bind and spot.zone == zone and (spot.sub == sub or spot.sub == "" or sub == "") then return end
     local key = zone .. "/" .. sub
     if innSeen[key] then return end
     innSeen[key] = true
@@ -303,6 +306,7 @@ pcall(f.RegisterEvent, f, "PLAYER_TALENT_UPDATE")
 pcall(f.RegisterEvent, f, "TRAIT_CONFIG_UPDATED")
 f:RegisterEvent("PLAYER_REGEN_ENABLED")
 f:RegisterEvent("PLAYER_UPDATE_RESTING")
+pcall(f.RegisterEvent, f, "HEARTHSTONE_BOUND")
 f:RegisterEvent("TRAINER_SHOW")
 f:RegisterEvent("TRAINER_UPDATE")
 f:RegisterEvent("TRAINER_CLOSED")
@@ -381,6 +385,12 @@ f:SetScript("OnEvent", function(_, event, arg1)
         if ns.UI then ns.UI.talentDismissedAt = nil end  -- a new level shows it right away
         C_Timer.After(1.5, function() ns.CheckTalents() end)
         C_Timer.After(2, function() ns.Quests.Check(level) end)
+
+    elseif event == "HEARTHSTONE_BOUND" then
+        C_Timer.After(0.5, function()
+            ns.char.bindSpot = { bind = GetBindLocation and GetBindLocation() or "",
+                sub = GetSubZoneText() or "", zone = GetRealZoneText() or "" }
+        end)
 
     elseif event == "PLAYER_UPDATE_RESTING" then
         C_Timer.After(1, ns.CheckInn)
