@@ -1,7 +1,7 @@
 -- Forget-Me-Not(e) Forever: core, saved settings, messages, events, slash commands
 local ADDON, ns = ...
 
-local PREFIX = "|cffffd100[Forget-Me-Not(e) Forever]|r "
+local PREFIX = "|cffffd100[FMN]|r "
 
 local DEFAULTS = {
     remindLevelUp = true,   -- check spells when you level up
