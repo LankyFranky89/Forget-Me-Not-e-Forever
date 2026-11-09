@@ -11,6 +11,8 @@ local DEFAULTS = {
     remindProf    = true,   -- profession reminders
     remindCapCraft = false, -- warn on every craft/gather while a profession is capped (off: to-do list only)
     remindInn     = true,
+    remindSupplies = true,  -- food and drink
+    supplyLow     = 0,      -- warn when you have this many or fewer
     remindDeparture = true, -- "Before you leave" window at flight masters and on Hearthstone
     remindFlight  = true,   -- undiscovered flight paths in your zone   -- remind to bind your hearthstone at a new inn
     remindQuests  = true,   -- class quests
@@ -499,4 +501,104 @@ SlashCmdList.FORGETMENOT = function(input)
     else
         ns.Print("/fmn (or /tn) – panel · /tn check · /tn list · /tn recipes · /tn alts · /tn forget <name> · /tn options · /tn skip <spell> · /tn unskip <spell> · /tn reset")
     end
+end
+
+-- Supplies: food and drink in your bags --------------------------------------------
+-- Drinks only matter for characters that use mana.
+local supplyType = {}   -- itemID -> "food" | "drink" | "both" | false
+
+local function ClassifyItem(itemID)
+    if supplyType[itemID] ~= nil then return supplyType[itemID] end
+    local kind = false
+    local ok, _, _, _, _, _, classID, subClassID = pcall(C_Item.GetItemInfoInstant, itemID)
+    if ok and classID == 0 and subClassID == 5 then          -- Consumable > Food & Drink
+        local ok2, spellName = pcall(C_Item.GetItemSpell, itemID)
+        if ok2 and type(spellName) == "string" then
+            if spellName:find("Refreshment") then kind = "both"
+            elseif spellName:find("Drink") then kind = "drink"
+            elseif spellName:find("Food") then kind = "food" end
+        end
+    end
+    -- item data may not be loaded yet: don't remember "nothing" for good
+    if kind or (ok and classID) then supplyType[itemID] = kind end
+    return kind
+end
+
+function ns.UsesMana()
+    return UnitPowerType("player") == 0 or (UnitPowerMax("player", 0) or 0) > 0
+end
+
+function ns.CountSupplies()
+    local food, drink = 0, 0
+    if not (C_Container and C_Container.GetContainerNumSlots) then return nil end
+    for bag = 0, (NUM_BAG_SLOTS or 4) do
+        for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
+            local info = C_Container.GetContainerItemInfo(bag, slot)
+            if info and info.itemID then
+                local k = ClassifyItem(info.itemID)
+                local n = info.stackCount or 1
+                if k == "food" or k == "both" then food = food + n end
+                if k == "drink" or k == "both" then drink = drink + n end
+            end
+        end
+    end
+    return food, drink
+end
+
+-- What you're out of: list of "food" / "drinks"
+function ns.MissingSupplies()
+    if not ns.db.remindSupplies then return {} end
+    local food, drink = ns.CountSupplies()
+    if not food then return {} end
+    local out = {}
+    if food <= ns.db.supplyLow then out[#out + 1] = "food" end
+    if ns.UsesMana() and drink <= ns.db.supplyLow then out[#out + 1] = "drinks" end
+    return out, food, drink
+end
+
+do
+    local last = {}
+    local pending = false
+    local ev = CreateFrame("Frame")
+    ev:RegisterEvent("BAG_UPDATE_DELAYED")
+    pcall(ev.RegisterEvent, ev, "MERCHANT_SHOW")
+    ev:SetScript("OnEvent", function(_, event)
+        if not ns.db or not ns.db.remindSupplies then return end
+        if event == "BAG_UPDATE_DELAYED" then
+            if pending then return end
+            pending = true
+            C_Timer.After(1, function()
+                pending = false
+                local missing = ns.MissingSupplies()
+                local now = {}
+                for _, m in ipairs(missing) do
+                    now[m] = true
+                    if not last[m] then
+                        ns.Print(format("You're out of %s! Buy some at the next vendor.", m))
+                        if UIErrorsFrame then UIErrorsFrame:AddMessage("Out of " .. m .. "!", 1, 0.6, 0.2) end
+                    end
+                end
+                last = now
+            end)
+        elseif event == "MERCHANT_SHOW" then
+            C_Timer.After(0.3, function()
+                local missing = ns.MissingSupplies()
+                if #missing == 0 or not (GetMerchantNumItems and GetMerchantItemID) then return end
+                local want = {}
+                for _, m in ipairs(missing) do want[m] = true end
+                local found = {}
+                for i = 1, GetMerchantNumItems() do
+                    local id = GetMerchantItemID(i)
+                    local k = id and ClassifyItem(id)
+                    if k and ((want.food and (k == "food" or k == "both")) or (want.drinks and (k == "drink" or k == "both"))) then
+                        local name = C_Item.GetItemNameByID and C_Item.GetItemNameByID(id) or ("item " .. id)
+                        found[#found + 1] = name
+                    end
+                end
+                if #found > 0 then
+                    ns.Print(format("You're out of %s – this vendor sells: %s", table.concat(missing, " and "), table.concat(found, ", ")))
+                end
+            end)
+        end
+    end)
 end

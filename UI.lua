@@ -409,6 +409,7 @@ local CHECKS = {
     { "remindInn",     "Remind me to bind my hearthstone when I enter an inn" },
     { "remindFlight",  "Remind me about undiscovered flight paths in my zone" },
     { "remindDeparture", "Show 'Before you leave' at flight masters, docks, portals and on Hearthstone" },
+    { "remindSupplies", "Remind me when I run out of food or drinks" },
     { "remindQuests",  "Remind me about class quests" },
     { "remindTalents", "Remind me about unspent talent points" },
     { "remindRecipes", "Remind me about new profession recipes at the trainer" },
