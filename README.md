@@ -1,4 +1,4 @@
-# Squire
+# Forget-Me-Not
 A Reminder and To-do list Addon for WoW Forever
 
 (WoW Forever, interface 16001)
@@ -6,7 +6,7 @@ A Reminder and To-do list Addon for WoW Forever
 Reminds you to learn new spell ranks and train professions at the right time.
 
 ## Install
-Unzip so the folder sits at `World of Warcraft\_forever_\Interface\AddOns\Squire\` (the `.toc` must be directly inside it). Restart the game or `/reload`.
+Unzip so the folder sits at `World of Warcraft\_forever_\Interface\AddOns\ForgetMeNot\` (the `.toc` must be directly inside it). Restart the game or `/reload`.
 
 ## First run
 Talk to your class trainer once. The addon reads every spell, rank, level and cost straight from the trainer window, so nothing is guessed. After that it knows what unlocks at every level. Talk to profession trainers once too, so it records where they stand.
@@ -19,12 +19,12 @@ Talk to your class trainer once. The addon reads every spell, rank, level and co
 - Unspent talent points: reminder after level-up and in the panel.
 - New profession recipes: talk to a profession trainer once; it tells you when your skill is high enough for new recipes there.
 - Capped profession (e.g. 75/75): shows in the to-do list when you enter a capital or get close to the trainer. Optional: a warning on every craft or gather (off by default, in Options).
-- Recipes waiting: the panel lists every recipe you have the skill for but haven't bought, with prices; ones you can't afford are shown in red. "What can I learn?" window (spells + recipes) opens anywhere: button in the panel, Shift-click the minimap button, or /squire recipes.
-- Class quests for all nine classes (from Forever quest guides): abilities like stances, forms, demons and racial priest spells, plus key weapon quests. Skip one with /squire skip <quest name>.
+- Recipes waiting: the panel lists every recipe you have the skill for but haven't bought, with prices; ones you can't afford are shown in red. "What can I learn?" window (spells + recipes) opens anywhere: button in the panel, Shift-click the minimap button, or /fmn recipes.
+- Class quests for all nine classes (from Forever quest guides): abilities like stances, forms, demons and racial priest spells, plus key weapon quests. Skip one with /fmn skip <quest name>.
 - Minimap button: left-click opens the panel, right-click opens the to-do list, drag to move.
 
 ## Commands
-`/squire` panel · `/squire alts` · `/squire forget <name>` · `/squire check` · `/squire list` · `/squire options` · `/squire skip <spell>` · `/squire unskip <spell>` · `/squire reset`
+`/fmn` panel · `/fmn alts` · `/fmn forget <name>` · `/fmn check` · `/fmn list` · `/fmn options` · `/fmn skip <spell>` · `/fmn unskip <spell>` · `/fmn reset`
 
 ## Please test and tell me
 1. Does the trainer box show up next to the trainer window, with the right spells and cost?

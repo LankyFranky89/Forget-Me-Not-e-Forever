@@ -1,4 +1,4 @@
--- Squire: profession milestones (Vanilla rules)
+-- Forget-Me-Not: profession milestones (Vanilla rules)
 local ADDON, ns = ...
 local P = {}
 ns.Prof = P

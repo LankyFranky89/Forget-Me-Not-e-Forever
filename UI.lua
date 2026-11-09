@@ -1,9 +1,9 @@
--- Squire: minimap button, overview panel, options
+-- Forget-Me-Not: minimap button, overview panel, options
 local ADDON, ns = ...
 local UI = {}
 ns.UI = UI
 
-local ICON = "Interface\\AddOns\\Squire\\Squire"
+local ICON = "Interface\\AddOns\\ForgetMeNot\\ForgetMeNot"
 
 -- Minimap button -----------------------------------------------------------
 local function PlaceButton(b)
@@ -14,7 +14,7 @@ local function PlaceButton(b)
 end
 
 local function CreateMinimapButton()
-    local b = CreateFrame("Button", "SquireMinimapButton", Minimap)
+    local b = CreateFrame("Button", "ForgetMeNotMinimapButton", Minimap)
     b:SetSize(31, 31)
     b:SetFrameStrata("MEDIUM")
     b:SetFrameLevel(8)
@@ -55,7 +55,7 @@ local function CreateMinimapButton()
     end)
     b:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("Squire", 1, 0.82, 0)
+        GameTooltip:AddLine("Forget-Me-Not", 1, 0.82, 0)
         local spells = ns.GetAvailable()
         if not ns.HasServiceData() then
             GameTooltip:AddLine("Talk to your class trainer once to read spells.", 1, 1, 1, true)
@@ -79,7 +79,7 @@ end
 
 -- Overview panel -------------------------------------------------------------
 local function CreatePanel()
-    local f = ns.MakeWindow("SquirePanel")
+    local f = ns.MakeWindow("ForgetMeNotPanel")
     f:SetSize(440, 480)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
@@ -88,8 +88,8 @@ local function CreatePanel()
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    f.TitleText:SetText("Squire")
-    tinsert(UISpecialFrames, "SquirePanel")
+    f.TitleText:SetText("Forget-Me-Not")
+    tinsert(UISpecialFrames, "ForgetMeNotPanel")
 
     local sf = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
     sf:SetPoint("TOPLEFT", 12, -32)
@@ -341,10 +341,10 @@ end
 
 local function CreateOptions()
     local p = CreateFrame("Frame")
-    p.name = "Squire"
+    p.name = "Forget-Me-Not"
     local title = p:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", 16, -16)
-    title:SetText("Squire")
+    title:SetText("Forget-Me-Not")
 
     local last = title
     local boxes = {}
@@ -369,7 +369,7 @@ local function CreateOptions()
     end)
 
     if Settings and Settings.RegisterCanvasLayoutCategory then
-        local cat = Settings.RegisterCanvasLayoutCategory(p, "Squire")
+        local cat = Settings.RegisterCanvasLayoutCategory(p, "Forget-Me-Not")
         Settings.RegisterAddOnCategory(cat)
         UI.category = cat
     end
@@ -380,7 +380,7 @@ function UI.OpenOptions()
     if UI.category and Settings and Settings.OpenToCategory then
         Settings.OpenToCategory(UI.category:GetID())
     else
-        ns.Print("Options: open Esc > Options > AddOns > Squire.")
+        ns.Print("Options: open Esc > Options > AddOns > Forget-Me-Not.")
     end
 end
 
@@ -407,7 +407,7 @@ local function OpenTalents()
 end
 
 local function CreateBubble()
-    local f = CreateFrame("Button", "SquireTalentBubble", UIParent, "BackdropTemplate")
+    local f = CreateFrame("Button", "ForgetMeNotTalentBubble", UIParent, "BackdropTemplate")
     f:SetSize(260, 52)
     f:SetFrameStrata("DIALOG")
     f:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",

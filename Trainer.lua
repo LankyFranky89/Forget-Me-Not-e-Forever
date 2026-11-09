@@ -1,4 +1,4 @@
--- Squire: reads the trainer window, records trainer locations, "Learn all" helper
+-- Forget-Me-Not: reads the trainer window, records trainer locations, "Learn all" helper
 local ADDON, ns = ...
 local T = {}
 ns.Trainer = T
@@ -263,10 +263,10 @@ end
 
 -- "Learn all" helper next to the trainer window
 local function CreateHelper()
-    local f = ns.MakeWindow("SquireTrainerHelper")
+    local f = ns.MakeWindow("ForgetMeNotTrainerHelper")
     f:SetSize(260, 130)
     f:SetFrameStrata("HIGH")
-    f.TitleText:SetText("Squire")
+    f.TitleText:SetText("Forget-Me-Not")
     f.info = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.info:SetPoint("TOPLEFT", 14, -34)
     f.info:SetPoint("RIGHT", -14, 0)
@@ -277,7 +277,7 @@ local function CreateHelper()
     f.btn:SetScript("OnClick", function()
         local list, cost = T.CurrentAvailable()
         if #list == 0 then return end
-        StaticPopup_Show("SQUIRE_LEARNALL", #list, ns.Money(cost))
+        StaticPopup_Show("FORGETMENOT_LEARNALL", #list, ns.Money(cost))
     end)
     T.helper = f
     return f
@@ -362,7 +362,7 @@ function T.BuyNext()
     ns.UI.Refresh()
 end
 
-StaticPopupDialogs["SQUIRE_LEARNALL"] = {
+StaticPopupDialogs["FORGETMENOT_LEARNALL"] = {
     text = "Learn %d spell(s) for %s?",
     button1 = YES,
     button2 = NO,

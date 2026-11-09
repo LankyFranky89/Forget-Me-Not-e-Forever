@@ -1,14 +1,14 @@
--- Squire: class quest reminders
+-- Forget-Me-Not: class quest reminders
 --
 -- Data from WoW Forever class quest guides (Icy Veins, Warcraft Tavern, wow4ever.quest).
 -- Each entry:
 --   level    = when the quest becomes available
 --   quest    = the quest to look for (first step)
 --   reward   = what you get
---   spell(s) = a spell the quest teaches; known = done (works even for quests done before Squire)
---   final    = last quest title(s) of the chain; turned in = done (only seen while Squire runs)
+--   spell(s) = a spell the quest teaches; known = done (works even for quests done before Forget-Me-Not)
+--   final    = last quest title(s) of the chain; turned in = done (only seen while Forget-Me-Not runs)
 --   faction / races = who gets it (raceFile names: Human, Dwarf, NightElf, Gnome, Orc, Scourge, Troll, Tauren)
--- Quests that are only remembered by turn-in can be hidden with /squire skip <quest name>.
+-- Quests that are only remembered by turn-in can be hidden with /fmn skip <quest name>.
 local ADDON, ns = ...
 local Q = {}
 ns.Quests = Q

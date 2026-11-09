@@ -1,7 +1,7 @@
--- Squire: core, saved settings, messages, events, slash commands
+-- Forget-Me-Not: core, saved settings, messages, events, slash commands
 local ADDON, ns = ...
 
-local PREFIX = "|cffffd100[Squire]|r "
+local PREFIX = "|cffffd100[Forget-Me-Not]|r "
 
 local DEFAULTS = {
     remindLevelUp = true,   -- check spells when you level up
@@ -253,7 +253,7 @@ function ns.UnspentTalents()
     return nil
 end
 
--- /squire talents: shows what each method returns
+-- /fmn talents: shows what each method returns
 function ns.DebugTalents()
     for _, m in ipairs(TALENT_METHODS) do
         local ok, n = pcall(m.fn)
@@ -293,11 +293,11 @@ f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:SetScript("OnEvent", function(_, event, arg1)
     if event == "ADDON_LOADED" then
         if arg1 ~= ADDON then return end
-        SquireDB = SquireDB or {}
-        SquireCharDB = SquireCharDB or {}
-        ApplyDefaults(SquireDB, DEFAULTS)
-        ApplyDefaults(SquireCharDB, CHAR_DEFAULTS)
-        ns.db, ns.char = SquireDB, SquireCharDB
+        ForgetMeNotDB = ForgetMeNotDB or {}
+        ForgetMeNotCharDB = ForgetMeNotCharDB or {}
+        ApplyDefaults(ForgetMeNotDB, DEFAULTS)
+        ApplyDefaults(ForgetMeNotCharDB, CHAR_DEFAULTS)
+        ns.db, ns.char = ForgetMeNotDB, ForgetMeNotCharDB
         -- 0.8.4: per-craft cap warning is now off by default
         if not ns.db.capCraftDefaultOff then
             ns.db.remindCapCraft = false
@@ -318,11 +318,21 @@ f:SetScript("OnEvent", function(_, event, arg1)
         return
 
     elseif event == "PLAYER_LOGIN" then
+        -- one-time move of settings and data from the old Squire name
+        if not ns.db.migratedFromSquire and type(SquireDB) == "table" then
+            for k, v in pairs(SquireDB) do ns.db[k] = v end
+            ns.db.migratedFromSquire = true
+            ns.Print("Moved your Squire settings over to Forget-Me-Not.")
+        end
+        if not ns.char.migratedFromSquire and type(SquireCharDB) == "table" then
+            for k, v in pairs(SquireCharDB) do ns.char[k] = v end
+            ns.char.migratedFromSquire = true
+        end
         -- one-time move of settings and data from the old TrainerNudge name
         if not ns.db.migratedFromTN and type(TrainerNudgeDB) == "table" then
             for k, v in pairs(TrainerNudgeDB) do ns.db[k] = v end
             ns.db.migratedFromTN = true
-            ns.Print("Moved your TrainerNudge settings over to Squire.")
+            ns.Print("Moved your TrainerNudge settings over to Forget-Me-Not.")
         end
         if not ns.char.migratedFromTN and type(TrainerNudgeCharDB) == "table" then
             for k, v in pairs(TrainerNudgeCharDB) do ns.char[k] = v end
@@ -379,9 +389,11 @@ f:SetScript("OnEvent", function(_, event, arg1)
 end)
 
 -- Slash commands
-SLASH_SQUIRE1 = "/squire"
-SLASH_SQUIRE2 = "/tn"
-SlashCmdList.SQUIRE = function(input)
+SLASH_FORGETMENOT1 = "/fmn"
+SLASH_FORGETMENOT2 = "/forgetmenot"
+SLASH_FORGETMENOT3 = "/squire"
+SLASH_FORGETMENOT4 = "/tn"
+SlashCmdList.FORGETMENOT = function(input)
     local cmd, rest = (input or ""):match("^%s*(%S*)%s*(.-)%s*$")
     cmd = (cmd or ""):lower()
     if cmd == "" then
@@ -431,6 +443,6 @@ SlashCmdList.SQUIRE = function(input)
         ns.Print("Spell data cleared. Talk to your class trainer to read it again.")
         ns.UI.Refresh()
     else
-        ns.Print("/squire (or /tn) – panel · /tn check · /tn list · /tn recipes · /tn alts · /tn forget <name> · /tn options · /tn skip <spell> · /tn unskip <spell> · /tn reset")
+        ns.Print("/fmn (or /tn) – panel · /tn check · /tn list · /tn recipes · /tn alts · /tn forget <name> · /tn options · /tn skip <spell> · /tn unskip <spell> · /tn reset")
     end
 end

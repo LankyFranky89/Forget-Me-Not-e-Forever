@@ -1,4 +1,4 @@
--- Squire: to-do list in cities and near trainers you need
+-- Forget-Me-Not: to-do list in cities and near trainers you need
 local ADDON, ns = ...
 local N = {}
 ns.Nearby = N
@@ -115,7 +115,7 @@ local function SetWaypoint(t)
 end
 
 local function CreateList()
-    local f = ns.MakeWindow("SquireListFrame")
+    local f = ns.MakeWindow("ForgetMeNotListFrame")
     f:SetSize(480, 90)
     f:SetPoint("TOP", 0, -140)
     f:SetFrameStrata("HIGH")
@@ -124,7 +124,7 @@ local function CreateList()
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    tinsert(UISpecialFrames, "SquireListFrame")  -- Esc closes it
+    tinsert(UISpecialFrames, "ForgetMeNotListFrame")  -- Esc closes it
     f.rows = {}
     for i = 1, ROWS do
         local r = CreateFrame("Frame", nil, f)
@@ -268,7 +268,7 @@ end
 function N.ShowRecipes(prof)
     local f = N.recipeFrame
     if not f then
-        f = ns.MakeWindow("SquireRecipeFrame")
+        f = ns.MakeWindow("ForgetMeNotRecipeFrame")
         f:SetSize(450, 200)
         f:SetClampedToScreen(true)
         f:SetFrameStrata("DIALOG")
@@ -277,7 +277,7 @@ function N.ShowRecipes(prof)
         f:RegisterForDrag("LeftButton")
         f:SetScript("OnDragStart", f.StartMoving)
         f:SetScript("OnDragStop", f.StopMovingOrSizing)
-        tinsert(UISpecialFrames, "SquireRecipeFrame")
+        tinsert(UISpecialFrames, "ForgetMeNotRecipeFrame")
         f.content = CreateFrame("Frame", nil, f)
         f.content:SetPoint("TOPLEFT", 16, -32)
         f.content:SetSize(410, 10)
@@ -359,7 +359,7 @@ function N.ShowRecipes(prof)
     end
     f.footer:SetText(table.concat(foot, "\n"))
     f.TitleText:SetText(prof and (prof .. " – learnable recipes") or "What can I learn?")
-    -- sit next to the Squire panel instead of on top of it
+    -- sit next to the Forget-Me-Not panel instead of on top of it
     f:ClearAllPoints()
     local panel = ns.UI and ns.UI.panel
     if panel and panel:IsShown() then
