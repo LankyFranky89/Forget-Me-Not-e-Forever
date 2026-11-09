@@ -201,13 +201,13 @@ local function BuildText()
                 local name, _, rank, maxRank = GetProfessionInfo(idx[i])
                 if name then
                     any = true
-                    local line = format("%s  %d / %d", name, rank, maxRank)
                     local r = recipeSum[name]
+                    local extra
                     if r and r.count > 0 then
-                        line = line .. format("  %s· %d recipe%s can be learned (%s)|r", GREY, r.count,
+                        extra = format("%s%d recipe%s can be learned (%s)|r", GREY, r.count,
                             r.count == 1 and "" or "s", ns.Money(r.cost))
                     end
-                    add(line)
+                    add("", { bar = { name = name, rank = rank, max = maxRank, extra = extra } })
                 end
             end
         end
@@ -294,13 +294,52 @@ function UI.Refresh()
                 r:SetScript("OnLeave", function() GameTooltip:Hide() end)
                 f.rows[i] = r
             end
-            r.fs:SetText(line == " " and "" or line)
-            local h = math.max(r.fs:GetStringHeight(), 8) + 3
+            local d = datas[i]
+            local h
+            if d and d.bar then
+                -- skill bar like the game's profession bars
+                if not r.bar then
+                    local b = CreateFrame("StatusBar", nil, r)
+                    b:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+                    b:SetStatusBarColor(0.25, 0.4, 0.95)
+                    b:SetHeight(18)
+                    b:SetPoint("TOPLEFT", 0, -2)
+                    b:SetPoint("TOPRIGHT", -10, -2)
+                    b.bg = b:CreateTexture(nil, "BACKGROUND")
+                    b.bg:SetAllPoints()
+                    b.bg:SetColorTexture(0, 0, 0, 0.5)
+                    b.border = CreateFrame("Frame", nil, b, "BackdropTemplate")
+                    b.border:SetPoint("TOPLEFT", -2, 2)
+                    b.border:SetPoint("BOTTOMRIGHT", 2, -2)
+                    b.border:SetBackdrop({ edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 8 })
+                    b.border:SetBackdropBorderColor(0.6, 0.6, 0.6)
+                    b.name = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                    b.name:SetPoint("LEFT", 6, 0)
+                    b.val = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                    b.val:SetPoint("RIGHT", -6, 0)
+                    r.bar = b
+                end
+                r.bar:SetMinMaxValues(0, math.max(1, d.bar.max))
+                r.bar:SetValue(d.bar.rank)
+                r.bar.name:SetText(d.bar.name)
+                r.bar.val:SetText(format("%d / %d", d.bar.rank, d.bar.max))
+                r.bar:Show()
+                r.fs:ClearAllPoints()
+                r.fs:SetPoint("TOPLEFT", 8, -24)
+                r.fs:SetText(d.bar.extra or "")
+                h = 24 + (d.bar.extra and (r.fs:GetStringHeight() + 4) or 2)
+            else
+                if r.bar then r.bar:Hide() end
+                r.fs:ClearAllPoints()
+                r.fs:SetPoint("TOPLEFT")
+                r.fs:SetText(line == " " and "" or line)
+                h = math.max(r.fs:GetStringHeight(), 8) + 3
+            end
             r:SetSize(390, h)
             r:ClearAllPoints()
             r:SetPoint("TOPLEFT", f.child, "TOPLEFT", 0, -y)
-            r.data = datas[i]
-            r:EnableMouse(datas[i] ~= nil)
+            r.data = (d and not d.bar) and d or nil
+            r:EnableMouse(r.data ~= nil)
             r:Show()
             y = y + h
         end
