@@ -290,7 +290,7 @@ function T.CurrentAvailable()
         local name, sub, stype = ServiceInfo(i)
         if stype == "available" then
             local s = { name = name, rank = sub or "" }
-            if not ns.IsSkipped(s) then
+            if not ns.IsSkipped(s) and not ns.IsWeaponSkill(name) then
                 list[#list + 1] = s
                 cost = cost + (GetTrainerServiceCost(i) or 0)
             end
@@ -342,7 +342,7 @@ function T.BuyNext()
         local name, sub, stype = ServiceInfo(i)
         if stype == "available" then
             local key = ServiceKey(i, name, sub or "")
-            if not ns.IsSkipped({ name = name, rank = sub or "" }) and not T.tried[key] then
+            if not ns.IsSkipped({ name = name, rank = sub or "" }) and not ns.IsWeaponSkill(name) and not T.tried[key] then
                 if (GetTrainerServiceCost(i) or 0) > GetMoney() then
                     ns.Print("Not enough gold for " .. name .. ". Stopped.")
                     T.buying = false

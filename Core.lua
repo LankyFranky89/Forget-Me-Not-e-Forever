@@ -74,6 +74,18 @@ function ns.Money(copper)
     return tostring(copper) .. "c"
 end
 
+-- Weapon skills taught by trainers/weapon masters are ignored everywhere
+ns.WEAPON_SKILLS = {
+    ["Axes"] = true, ["Two-Handed Axes"] = true, ["One-Handed Axes"] = true,
+    ["Maces"] = true, ["Two-Handed Maces"] = true, ["One-Handed Maces"] = true,
+    ["Swords"] = true, ["Two-Handed Swords"] = true, ["One-Handed Swords"] = true,
+    ["Daggers"] = true, ["Staves"] = true, ["Polearms"] = true, ["Fist Weapons"] = true,
+    ["Bows"] = true, ["Guns"] = true, ["Crossbows"] = true, ["Thrown"] = true, ["Wands"] = true,
+}
+function ns.IsWeaponSkill(name)
+    return name and ns.WEAPON_SKILLS[name] or false
+end
+
 function ns.IsSkipped(s)
     local sk = ns.char.skipped
     return sk[s.name] or sk[s.name .. "|" .. (s.rank or "")]
@@ -97,7 +109,7 @@ function ns.GetAvailable(level)
     level = level or UnitLevel("player")
     local list, cost = {}, 0
     for _, s in pairs(ns.char.services) do
-        if not s.known and s.level <= level and not ns.IsSkipped(s) then
+        if not s.known and s.level <= level and not ns.IsSkipped(s) and not ns.IsWeaponSkill(s.name) then
             list[#list + 1] = s
             cost = cost + (s.cost or 0)
         end
@@ -112,7 +124,7 @@ function ns.GetUpcoming(level, range)
     range = range or 10
     local list = {}
     for _, s in pairs(ns.char.services) do
-        if not s.known and s.level > level and s.level <= level + range and not ns.IsSkipped(s) then
+        if not s.known and s.level > level and s.level <= level + range and not ns.IsSkipped(s) and not ns.IsWeaponSkill(s.name) then
             list[#list + 1] = s
         end
     end
