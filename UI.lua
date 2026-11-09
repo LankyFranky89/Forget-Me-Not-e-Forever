@@ -1,4 +1,4 @@
--- Forget-Me-Not: minimap button, overview panel, options
+-- Forget-Me-Not(e) Forever: minimap button, overview panel, options
 local ADDON, ns = ...
 local UI = {}
 ns.UI = UI
@@ -55,7 +55,7 @@ local function CreateMinimapButton()
     end)
     b:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("Forget-Me-Not", 1, 0.82, 0)
+        GameTooltip:AddLine("Forget-Me-Not(e) Forever", 1, 0.82, 0)
         local spells = ns.GetAvailable()
         if not ns.HasServiceData() then
             GameTooltip:AddLine("Talk to your class trainer once to read spells.", 1, 1, 1, true)
@@ -88,7 +88,7 @@ local function CreatePanel()
     f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart", f.StartMoving)
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    f.TitleText:SetText("Forget-Me-Not")
+    f.TitleText:SetText("Forget-Me-Not(e) Forever")
     tinsert(UISpecialFrames, "ForgetMeNotPanel")
 
     local sf = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
@@ -341,10 +341,10 @@ end
 
 local function CreateOptions()
     local p = CreateFrame("Frame")
-    p.name = "Forget-Me-Not"
+    p.name = "Forget-Me-Not(e) Forever"
     local title = p:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", 16, -16)
-    title:SetText("Forget-Me-Not")
+    title:SetText("Forget-Me-Not(e) Forever")
 
     local last = title
     local boxes = {}
@@ -369,7 +369,7 @@ local function CreateOptions()
     end)
 
     if Settings and Settings.RegisterCanvasLayoutCategory then
-        local cat = Settings.RegisterCanvasLayoutCategory(p, "Forget-Me-Not")
+        local cat = Settings.RegisterCanvasLayoutCategory(p, "Forget-Me-Not(e) Forever")
         Settings.RegisterAddOnCategory(cat)
         UI.category = cat
     end
@@ -380,7 +380,7 @@ function UI.OpenOptions()
     if UI.category and Settings and Settings.OpenToCategory then
         Settings.OpenToCategory(UI.category:GetID())
     else
-        ns.Print("Options: open Esc > Options > AddOns > Forget-Me-Not.")
+        ns.Print("Options: open Esc > Options > AddOns > Forget-Me-Not(e) Forever.")
     end
 end
 

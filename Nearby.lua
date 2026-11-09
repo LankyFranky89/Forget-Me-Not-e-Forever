@@ -1,4 +1,4 @@
--- Forget-Me-Not: to-do list in cities and near trainers you need
+-- Forget-Me-Not(e) Forever: to-do list in cities and near trainers you need
 local ADDON, ns = ...
 local N = {}
 ns.Nearby = N
@@ -359,7 +359,7 @@ function N.ShowRecipes(prof)
     end
     f.footer:SetText(table.concat(foot, "\n"))
     f.TitleText:SetText(prof and (prof .. " – learnable recipes") or "What can I learn?")
-    -- sit next to the Forget-Me-Not panel instead of on top of it
+    -- sit next to the Forget-Me-Not(e) Forever panel instead of on top of it
     f:ClearAllPoints()
     local panel = ns.UI and ns.UI.panel
     if panel and panel:IsShown() then

@@ -1,4 +1,4 @@
-# Forget-Me-Not
+# Forget-Me-Not(e) Forever
 A Reminder and To-do list Addon for WoW Forever
 
 (WoW Forever, interface 16001)

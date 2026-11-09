@@ -1,7 +1,7 @@
--- Forget-Me-Not: core, saved settings, messages, events, slash commands
+-- Forget-Me-Not(e) Forever: core, saved settings, messages, events, slash commands
 local ADDON, ns = ...
 
-local PREFIX = "|cffffd100[Forget-Me-Not]|r "
+local PREFIX = "|cffffd100[Forget-Me-Not(e) Forever]|r "
 
 local DEFAULTS = {
     remindLevelUp = true,   -- check spells when you level up
@@ -322,7 +322,7 @@ f:SetScript("OnEvent", function(_, event, arg1)
         if not ns.db.migratedFromSquire and type(SquireDB) == "table" then
             for k, v in pairs(SquireDB) do ns.db[k] = v end
             ns.db.migratedFromSquire = true
-            ns.Print("Moved your Squire settings over to Forget-Me-Not.")
+            ns.Print("Moved your Squire settings over to Forget-Me-Not(e) Forever.")
         end
         if not ns.char.migratedFromSquire and type(SquireCharDB) == "table" then
             for k, v in pairs(SquireCharDB) do ns.char[k] = v end
@@ -332,7 +332,7 @@ f:SetScript("OnEvent", function(_, event, arg1)
         if not ns.db.migratedFromTN and type(TrainerNudgeDB) == "table" then
             for k, v in pairs(TrainerNudgeDB) do ns.db[k] = v end
             ns.db.migratedFromTN = true
-            ns.Print("Moved your TrainerNudge settings over to Forget-Me-Not.")
+            ns.Print("Moved your TrainerNudge settings over to Forget-Me-Not(e) Forever.")
         end
         if not ns.char.migratedFromTN and type(TrainerNudgeCharDB) == "table" then
             for k, v in pairs(TrainerNudgeCharDB) do ns.char[k] = v end

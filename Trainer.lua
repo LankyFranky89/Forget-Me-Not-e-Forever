@@ -1,4 +1,4 @@
--- Forget-Me-Not: reads the trainer window, records trainer locations, "Learn all" helper
+-- Forget-Me-Not(e) Forever: reads the trainer window, records trainer locations, "Learn all" helper
 local ADDON, ns = ...
 local T = {}
 ns.Trainer = T
@@ -266,7 +266,7 @@ local function CreateHelper()
     local f = ns.MakeWindow("ForgetMeNotTrainerHelper")
     f:SetSize(260, 130)
     f:SetFrameStrata("HIGH")
-    f.TitleText:SetText("Forget-Me-Not")
+    f.TitleText:SetText("Forget-Me-Not(e) Forever")
     f.info = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.info:SetPoint("TOPLEFT", 14, -34)
     f.info:SetPoint("RIGHT", -14, 0)

@@ -1,8 +1,8 @@
 ## Interface: 16001
-## Title: Forget-Me-Not
+## Title: Forget-Me-Not(e) Forever
 ## Notes: Your leveling helper: new spells, profession milestones and recipes, talents and class quests.
 ## Author: LankyFranky89
-## Version: 0.13.1
+## Version: 0.13.2
 ## IconTexture: Interface\AddOns\ForgetMeNot\ForgetMeNot
 ## SavedVariables: ForgetMeNotDB
 ## SavedVariablesPerCharacter: ForgetMeNotCharDB
