@@ -31,18 +31,54 @@ local function Distance(t, cont, x, y)
     return math.sqrt(dx * dx + dy * dy)
 end
 
--- Find a recorded trainer: same zone first, else nearest on this continent
-local function FindTrainer(match)
-    local zone = GetRealZoneText()
-    local cont, x, y = PlayerWorldPos()
-    local best, bestD
-    for key, t in pairs(ns.db.trainers) do
-        if match(t) then
-            local d = cont and Distance(t, cont, x, y) or math.huge
-            if t.zone == zone then d = d - 100000 end
-            if not bestD or d < bestD then best, bestD = t, d end
+-- Built-in trainer list (TrainerDB.lua), turned into the same shape as recorded trainers
+local builtin
+local function Builtin()
+    if builtin then return builtin end
+    builtin = {}
+    local fac = (UnitFactionGroup("player") == "Horde") and "H" or "A"
+    -- check the axis order once against trainers you've actually visited
+    local swap = false
+    local seen = {}
+    for _, t in pairs(ns.db.trainers or {}) do if t.wx then seen[t.name] = t end end
+    for _, r in ipairs(ns.TRAINER_DB or {}) do
+        local v = seen[r[1]]
+        if v and v.cont == r[6] then
+            local straight = math.abs(v.wx - r[7]) + math.abs(v.wy - r[8])
+            local swapped = math.abs(v.wx - r[8]) + math.abs(v.wy - r[7])
+            swap = swapped < straight
+            break
         end
     end
+    for _, r in ipairs(ns.TRAINER_DB or {}) do
+        if r[5] == "N" or r[5] == fac then
+            builtin[#builtin + 1] = {
+                name = r[1], builtin = true,
+                kind = r[2] == "c" and "class" or "profession",
+                class = r[2] == "c" and r[3] or nil,
+                prof = r[2] == "p" and r[3] or nil,
+                max = r[4], cont = r[6],
+                wx = swap and r[8] or r[7], wy = swap and r[7] or r[8],
+            }
+        end
+    end
+    return builtin
+end
+
+-- Find the closest trainer: ones you've visited plus the built-in list.
+-- need = skill cap you're training towards (skips Journeyman trainers when you need Expert, etc.)
+local function FindTrainer(match, need)
+    local cont, x, y = PlayerWorldPos()
+    local best, bestD
+    local function try(t)
+        if not match(t) then return end
+        if need and t.max and t.max < need then return end
+        local d = cont and Distance(t, cont, x, y) or nil
+        if not d then d = (t.zone == GetRealZoneText()) and 1e8 or 1e9 end
+        if not bestD or d < bestD then best, bestD = t, d end
+    end
+    for _, t in pairs(ns.db.trainers) do try(t) end
+    for _, t in ipairs(Builtin()) do try(t) end
     return best
 end
 
@@ -134,7 +170,8 @@ function N.BuildTasks()
             tasks[#tasks + 1] = {
                 title = e.name,
                 detail = detail,
-                trainer = FindTrainer(function(t) return t.kind == "profession" and t.prof == e.name end),
+                trainer = FindTrainer(function(t) return t.kind == "profession" and t.prof == e.name end,
+                    e.state == "train" and (e.max or 0) + 1 or nil),
             }
         end
     end
@@ -173,8 +210,30 @@ function N.BuildTasks()
     return tasks
 end
 
+local CONT_MAP = { [0] = 1415, [1] = 1414 }   -- Eastern Kingdoms, Kalimdor
+
+local function ResolveMap(t)
+    if t.mapID then return true end
+    if not (C_Map.GetMapPosFromWorldPos and CreateVector2D and t.wx) then return false end
+    local world = CreateVector2D(t.wx, t.wy)
+    local contMap = CONT_MAP[t.cont]
+    local mapID, pos = C_Map.GetMapPosFromWorldPos(t.cont, world, contMap)
+    if not pos then return false end
+    -- zoom in: continent -> zone -> city
+    for _ = 1, 3 do
+        local info = C_Map.GetMapInfoAtPosition and C_Map.GetMapInfoAtPosition(mapID, pos:GetXY())
+        if not info or info.mapID == mapID then break end
+        local m2, p2 = C_Map.GetMapPosFromWorldPos(t.cont, world, info.mapID)
+        if not p2 then break end
+        mapID, pos = info.mapID, p2
+    end
+    t.mapID, t.x, t.y = mapID, pos:GetXY()
+    return true
+end
+
 local function SetWaypoint(t)
     if not (C_Map and C_Map.SetUserWaypoint and UiMapPoint) then return end
+    if not ResolveMap(t) then ns.Print("Couldn't place a waypoint for " .. t.name .. ".") return end
     if C_Map.CanSetUserWaypointOnMap and not C_Map.CanSetUserWaypointOnMap(t.mapID) then
         ns.Print("Can't place a waypoint on that map.")
         return
