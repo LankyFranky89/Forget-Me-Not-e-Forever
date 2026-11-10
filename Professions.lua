@@ -195,7 +195,130 @@ function P.Check(level)
             end
         end
     end
+    P.CheckBagRecipes()
     if ns.UI then ns.UI.Refresh() end
+end
+
+-- Recipes in your bags and bank ------------------------------------------------------
+-- Bank contents are remembered (per character) from the last time the bank was open.
+local function RecipeInfo(link)
+    if not (C_TooltipInfo and C_TooltipInfo.GetHyperlink) then return end
+    local ok, info = pcall(C_TooltipInfo.GetHyperlink, link)
+    if not ok or not info or not info.lines then return end
+    local prof, skill, known
+    for _, line in ipairs(info.lines) do
+        local text = line.leftText or ""
+        if text == (ITEM_SPELL_KNOWN or "Already known") then known = true end
+        if not prof then
+            local p, n = text:match("^Requires ([%a ]+) %((%d+)%)$")
+            if p and n then prof, skill = p, tonumber(n) end
+        end
+    end
+    return prof, skill, known
+end
+
+local function IsRecipe(itemID)
+    local ok, _, _, _, _, _, classID = pcall(C_Item.GetItemInfoInstant, itemID)
+    return ok and classID == 9      -- Recipe
+end
+
+local function BankBags()
+    local out = {}
+    if Enum and Enum.BagIndex then
+        if Enum.BagIndex.Bank then out[#out + 1] = Enum.BagIndex.Bank end
+        for i = 1, 7 do
+            local b = Enum.BagIndex["BankBag_" .. i] or Enum.BagIndex["CharacterBankTab_" .. i]
+            if b then out[#out + 1] = b end
+        end
+    end
+    if #out == 0 then
+        out[1] = -1
+        for b = (NUM_BAG_SLOTS or 4) + 1, (NUM_BAG_SLOTS or 4) + (NUM_BANKBAGSLOTS or 6) do out[#out + 1] = b end
+    end
+    return out
+end
+
+local function ScanBags(bags, into)
+    for _, bag in ipairs(bags) do
+        local ok, n = pcall(C_Container.GetContainerNumSlots, bag)
+        for slot = 1, (ok and n) or 0 do
+            local item = C_Container.GetContainerItemInfo(bag, slot)
+            if item and item.itemID and item.hyperlink and IsRecipe(item.itemID) then
+                into[item.itemID] = item.hyperlink
+            end
+        end
+    end
+end
+
+function P.SaveBank()
+    if not (ns.char and C_Container) then return end
+    local found = {}
+    ScanBags(BankBags(), found)
+    ns.char.bankRecipes = found
+end
+
+-- Every recipe you carry or bank that you don't know yet:
+-- { link, prof, skill, where = "bags"/"bank", ready = true if your skill is high enough }
+function P.BagRecipes()
+    local out = {}
+    if not (C_Container and GetProfessions and GetProfessionInfo) then return out end
+    local rank = {}
+    for _, i in pairs({ GetProfessions() }) do
+        local name, _, r = GetProfessionInfo(i)
+        if name then rank[name] = r end
+    end
+    local bags = {}
+    for b = 0, (NUM_BAG_SLOTS or 4) do bags[#bags + 1] = b end
+    local inBags = {}
+    ScanBags(bags, inBags)
+    local function add(list, where)
+        for id, link in pairs(list or {}) do
+            local prof, skill, known = RecipeInfo(link)
+            if prof and not known and rank[prof] then
+                out[#out + 1] = { id = id, link = link, prof = prof, skill = skill, where = where,
+                    ready = rank[prof] >= skill }
+            end
+        end
+    end
+    add(inBags, "bags")
+    local bank = {}
+    for id, link in pairs(ns.char.bankRecipes or {}) do if not inBags[id] then bank[id] = link end end
+    add(bank, "bank")
+    table.sort(out, function(a, b) return a.skill < b.skill end)
+    return out
+end
+
+-- Tell once (per session) when a carried/banked recipe becomes learnable
+local toldRecipe = {}
+function P.CheckBagRecipes()
+    if not ns.db.remindBagRecipes then return end
+    for _, r in ipairs(P.BagRecipes()) do
+        if r.ready and not toldRecipe[r.id] then
+            toldRecipe[r.id] = true
+            ns.Print(format("You can learn %s now (in your %s).", r.link, r.where))
+        end
+    end
+end
+
+do
+    local bev = CreateFrame("Frame")
+    pcall(bev.RegisterEvent, bev, "BANKFRAME_OPENED")
+    pcall(bev.RegisterEvent, bev, "PLAYERBANKSLOTS_CHANGED")
+    pcall(bev.RegisterEvent, bev, "BANKFRAME_CLOSED")
+    bev:RegisterEvent("BAG_UPDATE_DELAYED")
+    local bankOpen, pending = false, false
+    bev:SetScript("OnEvent", function(_, event)
+        if not ns.db then return end
+        if event == "BANKFRAME_OPENED" then bankOpen = true
+        elseif event == "BANKFRAME_CLOSED" then bankOpen = false; return end
+        if pending then return end
+        pending = true
+        C_Timer.After(1, function()
+            pending = false
+            if bankOpen then pcall(P.SaveBank) end
+            pcall(P.CheckBagRecipes)
+        end)
+    end)
 end
 
 -- Listen for crafts/gathers last, and safely: if the client refuses this event,

@@ -185,6 +185,13 @@ function N.BuildTasks()
             }
         end
     end
+    if ns.db.remindBagRecipes and ns.Prof.BagRecipes then
+        for _, r in ipairs(ns.Prof.BagRecipes()) do
+            if r.ready then
+                tasks[#tasks + 1] = { title = "Recipe in your " .. r.where, detail = format("%s – learn it (%s %d)", r.link, r.prof, r.skill) }
+            end
+        end
+    end
     local miss, mtext = ns.MissingSupplies()
     if #miss > 0 then
         tasks[#tasks + 1] = { title = "Supplies", detail = "You have " .. table.concat(mtext, " and ") .. " – visit a food & drink vendor" .. ns.SupplyTip(miss) }
