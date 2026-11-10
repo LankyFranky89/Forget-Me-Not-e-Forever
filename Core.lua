@@ -18,6 +18,8 @@ local DEFAULTS = {
     remindQuests  = true,   -- class quests
     remindTalents = true,   -- unspent talent points
     remindRecipes = true,   -- new profession recipes at the trainer
+    remindAmmo    = true,   -- arrows/bullets running low (bow, gun or crossbow equipped)
+    ammoLow       = 400,
     remindBagRecipes = true, -- recipes in bags/bank you can learn now
     showAlts      = true,   -- show other characters' to-do lists in the panel
     chat          = true,   -- chat messages
@@ -571,18 +573,56 @@ function ns.SupplyTip(missing)
     local t = ns.SupplyTier()
     local names = {}
     for _, m in ipairs(missing) do
-        if m == "food" then names[#names + 1] = t.food end
-        if m == "drinks" then names[#names + 1] = t.drink end
+        if m == "food" then names[#names + 1] = format("%s (level %d)", t.food, t.lvl) end
+        if m == "drinks" then names[#names + 1] = format("%s (level %d)", t.drink, t.lvl) end
+        if m == "arrows" or m == "bullets" then names[#names + 1] = ns.AmmoTip(m) end
     end
     if #names == 0 then return "" end
-    return format(" – best for your level: %s (level %d)", table.concat(names, " and "), t.lvl)
+    return " – best for your level: " .. table.concat(names, " and ")
+end
+
+-- Ammo: which kind your ranged weapon fires (nil if no bow/gun/crossbow equipped)
+local AMMO_TIERS = {
+    arrows  = { { 25, "Jagged Arrow" }, { 10, "Sharp Arrow" }, { 1, "Rough Arrow" } },
+    bullets = { { 25, "Solid Shot" },   { 10, "Heavy Shot" },  { 1, "Light Shot" } },
+}
+function ns.AmmoKind()
+    local id = GetInventoryItemID("player", 18)
+    if not id then return nil end
+    local ok, _, _, _, _, _, classID, sub = pcall(C_Item.GetItemInfoInstant, id)
+    if not ok or classID ~= 2 then return nil end
+    if sub == 2 or sub == 18 then return "arrows" end   -- bow, crossbow
+    if sub == 3 then return "bullets" end              -- gun
+end
+
+function ns.CountAmmo(kind)
+    local n = 0
+    if not (C_Container and kind) then return n end
+    local want = kind == "arrows" and 2 or 3
+    for bag = 0, (NUM_BAG_SLOTS or 4) do
+        for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
+            local info = C_Container.GetContainerItemInfo(bag, slot)
+            if info and info.itemID then
+                local ok, _, _, _, _, _, classID, sub = pcall(C_Item.GetItemInfoInstant, info.itemID)
+                if ok and classID == 6 and sub == want then n = n + (info.stackCount or 1) end
+            end
+        end
+    end
+    return n
+end
+
+function ns.AmmoTip(kind)
+    local level = UnitLevel("player")
+    for _, t in ipairs(AMMO_TIERS[kind] or {}) do
+        if level >= t[1] then return format("%s (level %d)", t[2], t[1]) end
+    end
 end
 
 -- What you're low on: list of "food" / "drinks", plus a readable text for each
 function ns.MissingSupplies()
-    if not ns.db.remindSupplies then return {}, {} end
     local food, drink = ns.CountSupplies()
     if not food then return {}, {} end
+    if not ns.db.remindSupplies then food, drink = math.huge, math.huge end
     local out, text = {}, {}
     local function add(kind, n)
         out[#out + 1] = kind
@@ -590,6 +630,11 @@ function ns.MissingSupplies()
     end
     if food <= ns.db.supplyLow then add("food", food) end
     if ns.UsesMana() and drink <= ns.db.supplyLow then add("drinks", drink) end
+    local ammo = ns.db.remindAmmo and ns.AmmoKind()
+    if ammo then
+        local n = ns.CountAmmo(ammo)
+        if n <= (ns.db.ammoLow or 400) then add(ammo, n) end
+    end
     return out, text
 end
 
@@ -600,7 +645,7 @@ do
     ev:RegisterEvent("BAG_UPDATE_DELAYED")
     pcall(ev.RegisterEvent, ev, "MERCHANT_SHOW")
     ev:SetScript("OnEvent", function(_, event)
-        if not ns.db or not ns.db.remindSupplies then return end
+        if not ns.db or not (ns.db.remindSupplies or ns.db.remindAmmo) then return end
         if event == "BAG_UPDATE_DELAYED" then
             if pending then return end
             pending = true
@@ -652,6 +697,22 @@ do
                         local note = b.req < tier.lvl and " |cffff8800(below your level – a better one is sold elsewhere)|r" or ""
                         parts[#parts + 1] = format("%s: %s%s", m, b.link or b.name, note)
                     end
+                end
+                if want.arrows or want.bullets then
+                    local sub = want.arrows and 2 or 3
+                    local bestA
+                    for i = 1, GetMerchantNumItems() do
+                        local id = GetMerchantItemID(i)
+                        local ok, _, _, _, _, _, classID, sc = pcall(C_Item.GetItemInfoInstant, id or 0)
+                        if ok and classID == 6 and sc == sub then
+                            local _, _, _, _, req = C_Item.GetItemInfo(id)
+                            req = req or 0
+                            if req <= level and (not bestA or req > bestA.req) then
+                                bestA = { req = req, link = GetMerchantItemLink and GetMerchantItemLink(i) or ("item " .. id) }
+                            end
+                        end
+                    end
+                    if bestA then parts[#parts + 1] = format("%s: %s", want.arrows and "arrows" or "bullets", bestA.link) end
                 end
                 if #parts > 0 then
                     ns.Print(format("You have %s – buy here: %s", table.concat(text, " and "), table.concat(parts, ", ")))

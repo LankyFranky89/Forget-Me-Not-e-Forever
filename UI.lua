@@ -537,6 +537,7 @@ local CHECKS = {
     { "remindQuests",  "Remind me about class quests" },
     { "remindTalents", "Remind me about unspent talent points" },
     { "remindRecipes", "Remind me about new profession recipes at the trainer" },
+    { "remindAmmo",    "Remind me when I have 400 or fewer arrows/bullets" },
     { "remindBagRecipes", "Tell me when a recipe in my bags or bank can be learned" },
     { "showAlts",      "Show my other characters' to-do lists in the panel" },
     { "chat",          "Chat messages" },
