@@ -257,6 +257,33 @@ function P.SaveBank()
     ns.char.bankRecipes = found
 end
 
+-- Syndicator (Baganator's data addon) keeps a saved copy of your bank: use it if installed
+local function SyndicatorBank()
+    local out = {}
+    if not (Syndicator and Syndicator.API and Syndicator.API.GetCurrentCharacter
+        and Syndicator.API.GetByCharacterFullName) then return out end
+    local ok, data = pcall(function()
+        return Syndicator.API.GetByCharacterFullName(Syndicator.API.GetCurrentCharacter())
+    end)
+    if not ok or type(data) ~= "table" then return out end
+    local function scan(containers)
+        if type(containers) ~= "table" then return end
+        for _, c in pairs(containers) do
+            local slots = type(c) == "table" and (c.slots or c) or nil
+            if type(slots) == "table" then
+                for _, item in pairs(slots) do
+                    if type(item) == "table" and item.itemID and item.itemLink and IsRecipe(item.itemID) then
+                        out[item.itemID] = item.itemLink
+                    end
+                end
+            end
+        end
+    end
+    scan(data.bank)
+    scan(data.bankTabs)
+    return out
+end
+
 -- Every recipe you carry or bank that you don't know yet:
 -- { link, prof, skill, where = "bags"/"bank", ready = true if your skill is high enough }
 function P.BagRecipes()
@@ -283,6 +310,7 @@ function P.BagRecipes()
     add(inBags, "bags")
     local bank = {}
     for id, link in pairs(ns.char.bankRecipes or {}) do if not inBags[id] then bank[id] = link end end
+    for id, link in pairs(SyndicatorBank()) do if not inBags[id] then bank[id] = link end end
     add(bank, "bank")
     table.sort(out, function(a, b) return a.skill < b.skill end)
     return out
