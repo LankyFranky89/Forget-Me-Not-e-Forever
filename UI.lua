@@ -523,26 +523,38 @@ function UI.TogglePanel()
 end
 
 -- Options -------------------------------------------------------------------
-local CHECKS = {
-    { "remindLevelUp", "Remind me when I level up" },
-    { "remindLogin",   "Remind me at login" },
-    { "remindCity",    "Show the to-do list in capital cities" },
-    { "remindNear",    "Show the to-do list when I'm near a trainer I need" },
-    { "remindProf",    "Profession reminders" },
-    { "remindCapCraft", "Warn every time I craft or gather while a profession is capped" },
-    { "remindInn",     "Remind me to bind my hearthstone when I enter an inn" },
-    { "remindFlight",  "Remind me about undiscovered flight paths in my zone" },
-    { "remindDeparture", "Show 'Before you leave' at flight masters, docks, portals and on Hearthstone" },
-    { "remindSupplies", "Remind me when I have 20 or fewer food or drinks" },
-    { "remindQuests",  "Remind me about class quests" },
-    { "remindTalents", "Remind me about unspent talent points" },
-    { "remindRecipes", "Remind me about new profession recipes at the trainer" },
-    { "remindAmmo",    "Remind me when I have 400 or fewer arrows/bullets" },
-    { "remindBagRecipes", "Tell me when a recipe in my bags or bank can be learned" },
-    { "showAlts",      "Show my other characters' to-do lists in the panel" },
-    { "chat",          "Chat messages" },
-    { "alert",         "On-screen alert" },
-    { "sound",         "Sound" },
+-- Two columns of small groups. "-" entries are group headings.
+local COLUMNS = {
+    {
+        { "-", "Show my to-do list" },
+        { "remindLevelUp", "When I level up" },
+        { "remindLogin",   "At login" },
+        { "remindCity",    "In capital cities" },
+        { "remindNear",    "Near a trainer I need" },
+        { "-", "Class" },
+        { "remindQuests",  "Class quests" },
+        { "remindTalents", "Unspent talent points" },
+        { "-", "Professions" },
+        { "remindProf",    "Next rank / skill cap" },
+        { "remindRecipes", "New recipes at the trainer" },
+        { "remindBagRecipes", "Recipes in my bags or bank" },
+        { "remindCapCraft", "Warn on every craft while capped" },
+    },
+    {
+        { "-", "Travel" },
+        { "remindInn",     "Bind hearthstone at a new inn" },
+        { "remindFlight",  "Undiscovered flight paths" },
+        { "remindDeparture", "'Before you leave' window" },
+        { "-", "Supplies" },
+        { "remindSupplies", "Food & drink (20 or fewer)" },
+        { "remindAmmo",    "Arrows & bullets (400 or fewer)" },
+        { "-", "How I'm told" },
+        { "chat",          "Chat message" },
+        { "alert",         "On-screen alert" },
+        { "sound",         "Sound" },
+        { "-", "Panel" },
+        { "showAlts",      "Show my other characters" },
+    },
 }
 
 local function Stepper(parent, label, key, step, min, max, anchor, y)
@@ -570,21 +582,37 @@ local function CreateOptions()
     title:SetPoint("TOPLEFT", 16, -16)
     title:SetText("Forget-Me-Not(e) Forever")
 
-    local last = title
     local boxes = {}
-    for i, c in ipairs(CHECKS) do
-        local cb = CreateFrame("CheckButton", nil, p, "UICheckButtonTemplate")
-        cb:SetSize(20, 20)
-        cb:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, i == 1 and -8 or 0)
-        local label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        label:SetPoint("LEFT", cb, "RIGHT", 4, 0)
-        label:SetText(c[2])
-        cb:SetScript("OnClick", function(self) ns.db[c[1]] = self:GetChecked() and true or false; UI.Refresh() end)
-        cb.key = c[1]
-        boxes[#boxes + 1] = cb
-        last = cb
+    local bottom
+    for col, list in ipairs(COLUMNS) do
+        local y = -48
+        local x = col == 1 and 16 or 330
+        for _, c in ipairs(list) do
+            if c[1] == "-" then
+                if y < -48 then y = y - 8 end
+                local h = p:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                h:SetPoint("TOPLEFT", x, y)
+                h:SetText(c[2])
+                y = y - 18
+            else
+                local cb = CreateFrame("CheckButton", nil, p, "UICheckButtonTemplate")
+                cb:SetSize(20, 20)
+                cb:SetPoint("TOPLEFT", x + 4, y)
+                local label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                label:SetPoint("LEFT", cb, "RIGHT", 2, 0)
+                label:SetText(c[2])
+                cb:SetScript("OnClick", function(self) ns.db[c[1]] = self:GetChecked() and true or false; UI.Refresh() end)
+                cb.key = c[1]
+                boxes[#boxes + 1] = cb
+                y = y - 20
+            end
+        end
+        if not bottom or y < bottom then bottom = y end
     end
-    local yards = Stepper(p, "Trainer distance: %d yards", "nearYards", 10, 10, 100, last, -10)
+    local anchor = p:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    anchor:SetPoint("TOPLEFT", 16, bottom - 8)
+    anchor:SetText("Settings")
+    local yards = Stepper(p, "Trainer distance: %d yards", "nearYards", 10, 10, 100, anchor, -6)
     local warn = Stepper(p, "Warn %d points before a profession cap", "profWarn", 1, 0, 25, yards, -10)
 
     p:SetScript("OnShow", function()
