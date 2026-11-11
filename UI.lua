@@ -185,12 +185,19 @@ local function BuildText()
     local className = UnitClass("player")
     add(format("%s%s|r  %s(%s %d)|r", WHITE, UnitName("player"), GREY, className, level))
     add(" ")
-    add(GOLD .. "Learn now|r")
+    local col = ns.db.collapsed or {}
+    ns.db.collapsed = col
+    local function header(key, text, n)
+        local arrow = col[key] and "|cffaaaaaa[+]|r " or "|cffaaaaaa[-]|r "
+        add(arrow .. GOLD .. text .. "|r" .. (n and (" " .. GREY .. "(" .. n .. ")|r") or ""), { toggle = key })
+    end
     if not ns.HasServiceData() then
+        add(GOLD .. "Learn now|r")
         add(GREY .. "Talk to your class trainer once so I can read the spell list.|r")
     else
         local list, cost = ns.GetAvailable(level)
-        if #list == 0 then add(GREY .. "Nothing new.|r") end
+        header("learn", "Learn now", #list)
+        if col.learn then list = {} cost = 0 elseif #list == 0 then add(GREY .. "Nothing new.|r") end
         for _, s in ipairs(list) do
             s.isSpell = true
             local icon = s.icon and format("|T%s:14:14|t ", tostring(s.icon)) or ""
@@ -199,9 +206,9 @@ local function BuildText()
         if #list > 0 then add(WHITE .. "Total: " .. ns.Money(cost) .. "|r") end
 
         add(" ")
-        add(GOLD .. "Coming up (next 10 levels)|r")
         local up = ns.GetUpcoming(level, 10)
-        if #up == 0 then add(GREY .. "Nothing in the next 10 levels.|r") end
+        header("upcoming", "Coming up (next 10 levels)", #up)
+        if col.upcoming then up = {} elseif #up == 0 then add(GREY .. "Nothing in the next 10 levels.|r") end
         for _, s in ipairs(up) do
             s.isSpell = true
             local icon = s.icon and format("|T%s:14:14|t ", tostring(s.icon)) or ""
@@ -241,7 +248,9 @@ local function BuildText()
                         extra = format("%s%d recipe%s can be learned (%s)|r", GREY, r.count,
                             r.count == 1 and "" or "s", ns.Money(r.cost))
                     end
-                    add("", { bar = { name = name, icon = icon, rank = rank, max = maxRank, extra = extra, skillLine = skillLine } })
+                    local ic = icon and format("|T%s:14:14|t ", tostring(icon)) or ""
+                    add(format("%s%s%s|r  %s%d/%d|r", ic, WHITE, name, GREY, rank, maxRank) .. (extra and ("  " .. extra) or ""),
+                        { prof = { name = name, skillLine = skillLine } })
                 end
             end
         end
@@ -336,6 +345,11 @@ function UI.Refresh()
                 r:SetScript("OnLeave", function() GameTooltip:Hide() end)
                 r:RegisterForClicks("LeftButtonUp")
                 r:SetScript("OnClick", function(self)
+                    if self.toggle then
+                        ns.db.collapsed[self.toggle] = not ns.db.collapsed[self.toggle] or nil
+                        UI.Refresh()
+                        return
+                    end
                     local b = self.barData
                     if b then UI.OpenProfession(b) end
                 end)
@@ -429,9 +443,10 @@ function UI.Refresh()
             r:SetSize(466, h)
             r:ClearAllPoints()
             r:SetPoint("TOPLEFT", f.child, "TOPLEFT", 0, -y)
-            r.data = (d and not d.bar and not d.unskip) and d or nil
-            r.barData = d and d.bar or nil
-            r:EnableMouse(r.data ~= nil or r.barData ~= nil)
+            r.toggle = d and d.toggle or nil
+            r.data = (d and not d.bar and not d.unskip and not d.toggle and not d.prof) and d or nil
+            r.barData = d and (d.bar or d.prof) or nil
+            r:EnableMouse(r.data ~= nil or r.barData ~= nil or r.toggle ~= nil)
             r:Show()
             y = y + h
         end
