@@ -238,6 +238,16 @@ local function ResolveMap(t)
     return true
 end
 
+-- Remove the pin we placed (only if it's still ours)
+function N.ClearOurWaypoint()
+    if not N.wp or not (C_Map and C_Map.HasUserWaypoint and C_Map.HasUserWaypoint()) then N.wp = nil return end
+    local p = C_Map.GetUserWaypoint and C_Map.GetUserWaypoint()
+    if p and p.uiMapID == N.wp.mapID and math.abs(p.position.x - N.wp.x) < 0.001 and math.abs(p.position.y - N.wp.y) < 0.001 then
+        C_Map.ClearUserWaypoint()
+    end
+    N.wp = nil
+end
+
 local function SetWaypoint(t)
     if not (C_Map and C_Map.SetUserWaypoint and UiMapPoint) then return end
     if not ResolveMap(t) then ns.Print("Couldn't place a waypoint for " .. t.name .. ".") return end
@@ -246,6 +256,7 @@ local function SetWaypoint(t)
         return
     end
     C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(t.mapID, t.x, t.y))
+    N.wp = t
     if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
         C_SuperTrack.SetSuperTrackedUserWaypoint(true)
     end
@@ -524,9 +535,14 @@ end
 
 -- Every 2 seconds: are you close to a trainer you need?
 local function Tick()
-    if not ns.db.remindNear or InCombatLockdown() then return end
     local cont, x, y = PlayerWorldPos()
     if not cont then return end
+    -- arrived: remove our pin
+    if N.wp then
+        local d = Distance(N.wp, cont, x, y)
+        if d and d < 8 then N.ClearOurWaypoint() end
+    end
+    if not ns.db.remindNear or InCombatLockdown() then return end
     local tasks = N.BuildTasks()
     local now = GetTime()
     for _, task in ipairs(tasks) do

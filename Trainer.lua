@@ -201,6 +201,7 @@ local function Scan()
 end
 
 function T.OnShow()
+    if ns.Nearby.ClearOurWaypoint then pcall(ns.Nearby.ClearOurWaypoint) end
     if not ApiOK() then
         ns.Print("This client's trainer window can't be read by addons, so spell reminders are off.")
         return
