@@ -2,7 +2,7 @@
 ## Title: Forget-Me-Not(e) Forever
 ## Notes: Your leveling helper: new spells, profession milestones and recipes, talents and class quests.
 ## Author: LankyFranky89
-## Version: 0.21.2
+## Version: 0.21.3
 ## IconTexture: Interface\AddOns\ForgetMeNot\ForgetMeNot
 ## OptionalDeps: Syndicator
 ## SavedVariables: ForgetMeNotDB

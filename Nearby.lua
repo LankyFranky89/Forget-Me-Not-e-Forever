@@ -533,7 +533,7 @@ local function Tick()
         local t = task.trainer
         if t then
             local d = Distance(t, cont, x, y)
-            local key = t.name .. "@" .. t.mapID
+            local key = t.name .. "@" .. tostring(t.mapID or t.cont)
             if d and d <= ns.db.nearYards and (not nearNotified[key] or now - nearNotified[key] > 600) then
                 nearNotified[key] = now
                 ns.Print(format("%s is close by (%d yd): %s", t.name, math.floor(d), task.detail))
