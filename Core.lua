@@ -95,6 +95,7 @@ end
 function ns.IsSkipped(s)
     local sk = ns.char.skipped
     return sk[s.name] or sk[s.name .. "|" .. (s.rank or "")]
+        or ((s.rank or "") == "" and sk[s.name .. "|L" .. (s.level or 0)])
 end
 
 function ns.SpellLabel(s)

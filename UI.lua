@@ -288,12 +288,12 @@ local function BuildText()
     end
 
     local skipped = {}
-    for k in pairs(ns.char.skipped) do skipped[#skipped + 1] = k:gsub("|", " ") end
+    for k in pairs(ns.char.skipped) do skipped[#skipped + 1] = k end
     if #skipped > 0 then
         table.sort(skipped)
         add(" ")
-        add(GOLD .. "Skipped|r " .. GREY .. "(/tn unskip <spell>)|r")
-        for _, k in ipairs(skipped) do add(GREY .. k .. "|r") end
+        add(GOLD .. "Ignored|r " .. GREY .. "(not counted until you un-ignore)|r")
+        for _, k in ipairs(skipped) do add(GREY .. k:gsub("|L%d+$", ""):gsub("|", " ") .. "|r", { unskip = k }) end
     end
     return lines, datas
 end
@@ -318,7 +318,7 @@ function UI.Refresh()
                 r = CreateFrame("Button", nil, f.child)
                 r.fs = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
                 r.fs:SetPoint("TOPLEFT")
-                r.fs:SetWidth(440)
+                r.fs:SetWidth(370)
                 r.fs:SetJustifyH("LEFT")
                 r.hl = r:CreateTexture(nil, "HIGHLIGHT")
                 r.hl:SetAllPoints()
@@ -401,10 +401,35 @@ function UI.Refresh()
                 r.fs:SetText(line == " " and "" or line)
                 h = math.max(r.fs:GetStringHeight(), 8) + 3
             end
+            -- Ignore / Un-ignore button on spell rows
+            local skipKey = d and d.isSpell and (d.name .. "|" .. (d.rank ~= "" and d.rank or ("L" .. (d.level or 0))))
+            local unskipKey = d and d.unskip
+            if skipKey or unskipKey then
+                if not r.ign then
+                    r.ign = CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
+                    r.ign:SetSize(70, 16)
+                    r.ign:SetPoint("TOPRIGHT", -12, 0)
+                    r.ign:SetNormalFontObject("GameFontHighlightSmall")
+                    r.ign:SetScript("OnClick", function(self)
+                        if self.unskip then
+                            ns.char.skipped[self.unskip] = nil
+                        elseif self.skip then
+                            ns.char.skipped[self.skip] = true
+                        end
+                        UI.Refresh()
+                    end)
+                end
+                r.ign.skip, r.ign.unskip = skipKey, unskipKey
+                r.ign:SetText(unskipKey and "Un-ignore" or "Ignore")
+                r.ign:Show()
+                h = math.max(h, 18)
+            elseif r.ign then
+                r.ign:Hide()
+            end
             r:SetSize(466, h)
             r:ClearAllPoints()
             r:SetPoint("TOPLEFT", f.child, "TOPLEFT", 0, -y)
-            r.data = (d and not d.bar) and d or nil
+            r.data = (d and not d.bar and not d.unskip) and d or nil
             r.barData = d and d.bar or nil
             r:EnableMouse(r.data ~= nil or r.barData ~= nil)
             r:Show()
