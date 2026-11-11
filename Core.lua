@@ -18,6 +18,7 @@ local DEFAULTS = {
     remindQuests  = true,   -- class quests
     remindTalents = true,   -- unspent talent points
     remindRecipes = true,   -- new profession recipes at the trainer
+    remindTurnIns = true,   -- finished quests to hand in here, in 'Before you leave'
     remindAmmo    = true,   -- arrows/bullets running low (bow, gun or crossbow equipped)
     ammoLow       = 400,
     remindBagRecipes = true, -- recipes in bags/bank you can learn now

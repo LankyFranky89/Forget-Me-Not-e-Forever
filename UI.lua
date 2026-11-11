@@ -585,6 +585,7 @@ local COLUMNS = {
         { "remindInn",     "Bind hearthstone at a new inn" },
         { "remindFlight",  "Undiscovered flight paths" },
         { "remindDeparture", "'Before you leave' window" },
+        { "remindTurnIns", "Quests to turn in before I leave" },
         { "-", "Supplies" },
         { "remindSupplies", "Food & drink (20 or fewer)" },
         { "remindAmmo",    "Arrows & bullets (400 or fewer)" },

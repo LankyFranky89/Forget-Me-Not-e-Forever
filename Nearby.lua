@@ -579,8 +579,33 @@ local function IsTier(name)
 end
 
 -- Things you can still do in this city/zone, at trainers you've visited here
+-- Finished quests whose turn-in is on this map (the map's "?" markers)
+local function TurnInsHere()
+    local out = {}
+    if not (C_Map and C_QuestLog and C_QuestLog.GetQuestsOnMap and C_QuestLog.IsComplete) then return out end
+    local mapID = C_Map.GetBestMapForUnit("player")
+    if not mapID then return out end
+    local ok, quests = pcall(C_QuestLog.GetQuestsOnMap, mapID)
+    local seen = {}
+    for _, q in ipairs(ok and quests or {}) do
+        if q.questID and not seen[q.questID] and C_QuestLog.IsComplete(q.questID) then
+            seen[q.questID] = true
+            out[#out + 1] = C_QuestLog.GetTitleForQuestID(q.questID) or ("quest " .. q.questID)
+        end
+    end
+    return out
+end
+N.TurnInsHere = TurnInsHere
+
 function N.DepartureItems(forHearth)
     local items = {}
+    if ns.db.remindTurnIns ~= false then
+        local done = TurnInsHere()
+        if #done > 0 then
+            items[#items + 1] = { title = format("%d quest%s to turn in here", #done, #done == 1 and "" or "s"),
+                detail = table.concat(done, ", ") }
+        end
+    end
     local _, classFile = UnitClass("player")
     local spells, cost = ns.GetAvailable()
     local ct = #spells > 0 and TrainersHere(function(t) return t.kind == "class" and t.class == classFile end)
