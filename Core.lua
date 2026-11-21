@@ -16,7 +16,6 @@ local DEFAULTS = {
     remindDeparture = true, -- "Before you leave" window at flight masters and on Hearthstone
     remindFlight  = true,   -- undiscovered flight paths in your zone   -- remind to bind your hearthstone at a new inn
     remindQuests  = true,   -- class quests
-    remindTalents = true,   -- unspent talent points
     remindRecipes = true,   -- new profession recipes at the trainer
     remindTurnIns = true,   -- finished quests to hand in here, in 'Before you leave'
     remindAmmo    = true,   -- arrows/bullets running low (bow, gun or crossbow equipped)
@@ -227,73 +226,6 @@ function ns.SaveSummary()
     }
 end
 
--- Unspent talent points, or nil if this client can't tell
--- Each way of reading unspent talent points; the first that works is used.
-local TALENT_METHODS = {
-    { name = "UnitCharacterPoints", fn = function()
-        if UnitCharacterPoints then return UnitCharacterPoints("player") end
-    end },
-    { name = "GetUnspentTalentPoints", fn = function()
-        if GetUnspentTalentPoints then return GetUnspentTalentPoints() end
-    end },
-    { name = "C_Traits (modern talents)", fn = function()
-        if not (C_ClassTalents and C_ClassTalents.GetActiveConfigID and C_Traits) then return end
-        local configID = C_ClassTalents.GetActiveConfigID()
-        if not configID then return end
-        local info = C_Traits.GetConfigInfo(configID)
-        local treeID = info and info.treeIDs and info.treeIDs[1]
-        if not treeID then return end
-        local currencies = C_Traits.GetTreeCurrencyInfo(configID, treeID, false)
-        if type(currencies) ~= "table" then return end
-        local total = 0
-        for _, c in ipairs(currencies) do
-            if type(c.quantity) == "number" then total = total + c.quantity end
-        end
-        return total
-    end },
-    { name = "Talent tabs (level - 9 - spent)", fn = function()
-        if not (GetNumTalentTabs and GetNumTalents and GetTalentInfo) then return end
-        local level = UnitLevel("player")
-        if level < 10 then return 0 end
-        local spent = 0
-        for tab = 1, GetNumTalentTabs() do
-            for i = 1, GetNumTalents(tab) do
-                local r = { GetTalentInfo(tab, i) }
-                -- current rank is the 5th value in the classic API
-                if type(r[5]) == "number" then spent = spent + r[5] end
-            end
-        end
-        return math.max(0, level - 9 - spent)
-    end },
-}
-
-function ns.UnspentTalents()
-    for _, m in ipairs(TALENT_METHODS) do
-        local ok, n = pcall(m.fn)
-        if ok and type(n) == "number" then return n, m.name end
-    end
-    return nil
-end
-
--- /fmn talents: shows what each method returns
-function ns.DebugTalents()
-    for _, m in ipairs(TALENT_METHODS) do
-        local ok, n = pcall(m.fn)
-        ns.Print(format("%s: %s", m.name, ok and tostring(n) or ("error: " .. tostring(n))))
-    end
-    local b = ns.UI and ns.UI.TalentButton and ns.UI.TalentButton()
-    ns.Print("Talent button found: " .. (b and (b:GetName() or "yes") or "no"))
-end
-
-local lastTalentMsg
-function ns.CheckTalents()
-    local n = (ns.db.remindTalents and ns.UnspentTalents()) or 0
-    lastTalentMsg = n
-    if ns.UI then
-        ns.UI.TalentBubble(n)
-        ns.UI.Refresh()
-    end
-end
 -- Inn reminder: when you start resting somewhere that isn't your hearthstone spot
 local innSeen = {}   -- places already reminded about this session
 function ns.CheckInn()
@@ -323,10 +255,6 @@ f:RegisterEvent("PLAYER_LEVEL_UP")
 f:RegisterEvent("SKILL_LINES_CHANGED")
 pcall(f.RegisterEvent, f, "CHAT_MSG_SKILL")          -- "Your skill in X has increased to N."
 pcall(f.RegisterEvent, f, "TRADE_SKILL_LIST_UPDATE")
-pcall(f.RegisterEvent, f, "CHARACTER_POINTS_CHANGED")
-pcall(f.RegisterEvent, f, "PLAYER_TALENT_UPDATE")
-pcall(f.RegisterEvent, f, "TRAIT_CONFIG_UPDATED")
-f:RegisterEvent("PLAYER_REGEN_ENABLED")
 f:RegisterEvent("PLAYER_UPDATE_RESTING")
 pcall(f.RegisterEvent, f, "HEARTHSTONE_BOUND")
 f:RegisterEvent("TRAINER_SHOW")
@@ -394,12 +322,7 @@ f:SetScript("OnEvent", function(_, event, arg1)
             if ns.db.remindLogin then
                 ns.CheckSpells(nil, true)
                 if ns.db.remindProf then ns.Prof.Check() end
-                ns.CheckTalents()
                 ns.Quests.Check()
-                -- re-show the talent bubble 15 minutes after it was closed
-                C_Timer.NewTicker(60, function()
-                    if not InCombatLockdown() then ns.CheckTalents() end
-                end)
             end
         end)
 
@@ -409,8 +332,6 @@ f:SetScript("OnEvent", function(_, event, arg1)
         if ns.db.remindProf then
             C_Timer.After(1, function() ns.Prof.Check(level) end)
         end
-        if ns.UI then ns.UI.talentDismissedAt = nil end  -- a new level shows it right away
-        C_Timer.After(1.5, function() ns.CheckTalents() end)
         C_Timer.After(2, function() ns.Quests.Check(level) end)
 
     elseif event == "HEARTHSTONE_BOUND" then
@@ -421,12 +342,6 @@ f:SetScript("OnEvent", function(_, event, arg1)
 
     elseif event == "PLAYER_UPDATE_RESTING" then
         C_Timer.After(1, ns.CheckInn)
-
-    elseif event == "PLAYER_REGEN_ENABLED" then
-        ns.CheckTalents()  -- the bubble waits until combat ends
-
-    elseif event == "CHARACTER_POINTS_CHANGED" or event == "PLAYER_TALENT_UPDATE" or event == "TRAIT_CONFIG_UPDATED" then
-        C_Timer.After(0.5, function() ns.CheckTalents() end)
 
     elseif event == "SKILL_LINES_CHANGED" or event == "CHAT_MSG_SKILL" or event == "TRADE_SKILL_LIST_UPDATE" then
         -- wait a moment so several skill-ups in a row are checked once, after the last one
@@ -478,9 +393,6 @@ SlashCmdList.FORGETMENOT = function(input)
         ns.UI.Refresh()
     elseif cmd == "recipes" then
         ns.Nearby.ShowRecipes(nil)
-    elseif cmd == "talents" then
-        ns.DebugTalents()
-        ns.CheckTalents()
     elseif cmd == "flights" then
         ns.Nearby.DebugFlights()
     elseif cmd == "notes" then

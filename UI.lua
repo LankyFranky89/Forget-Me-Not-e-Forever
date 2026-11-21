@@ -270,13 +270,6 @@ local function BuildText()
         end
     end
 
-    local talents = ns.UnspentTalents()
-    if talents and talents > 0 then
-        add(" ")
-        add(GOLD .. "Talents|r")
-        add(format("|cffff9966%d unspent point(s) – open your talents|r", talents))
-    end
-
     local me, alts = ns.CharKey(), {}
     for key, c in pairs(ns.db.chars) do
         if key ~= me then alts[#alts + 1] = { key = key, c = c } end
@@ -573,7 +566,6 @@ local COLUMNS = {
         { "remindNear",    "Near a trainer I need" },
         { "-", "Class" },
         { "remindQuests",  "Class quests" },
-        { "remindTalents", "Unspent talent points" },
         { "-", "Professions" },
         { "remindProf",    "Next rank / skill cap" },
         { "remindRecipes", "New recipes at the trainer" },
@@ -676,126 +668,6 @@ function UI.OpenOptions()
     else
         ns.Print("Options: open Esc > Options > AddOns > Forget-Me-Not(e) Forever.")
     end
-end
-
--- Talent bubble over the talent button --------------------------------------------
-local function TalentButton()
-    for _, n in ipairs({ "TalentMicroButton", "PlayerSpellsMicroButton", "TalentsMicroButton", "ClassTalentMicroButton" }) do
-        local b = _G[n]
-        if b and b.IsVisible and b:IsVisible() then return b end
-    end
-end
-UI.TalentButton = TalentButton
-
-local function OpenTalents()
-    local b = TalentButton()
-    if b then
-        b:Click()
-    elseif PlayerSpellsUtil and PlayerSpellsUtil.ToggleClassTalentOrSpecFrame then
-        PlayerSpellsUtil.ToggleClassTalentOrSpecFrame()
-    elseif ToggleTalentFrame then
-        ToggleTalentFrame()
-    else
-        ns.Print("Couldn't open the talents window – press your talents key.")
-    end
-end
-
-local function CreateBubble()
-    local f = CreateFrame("Button", "ForgetMeNotTalentBubble", UIParent, "BackdropTemplate")
-    f:SetSize(320, 70)
-    f:SetFrameStrata("DIALOG")
-    f:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        edgeSize = 14, insets = { left = 4, right = 4, top = 4, bottom = 4 } })
-    f:SetBackdropColor(0.05, 0.05, 0.05, 0.95)
-    f:SetBackdropBorderColor(1, 0.82, 0)
-
-    -- the tail: a gold diamond under a dark one, half hidden behind the bubble
-    local tail = CreateFrame("Frame", nil, f)
-    tail:SetSize(24, 24)
-    tail:SetPoint("CENTER", f, "BOTTOM", 0, 1)
-    tail:SetFrameLevel(math.max(f:GetFrameLevel() - 1, 0))
-    local outer = tail:CreateTexture(nil, "BACKGROUND")
-    outer:SetTexture("Interface\\Buttons\\WHITE8X8")
-    outer:SetVertexColor(1, 0.82, 0)
-    outer:SetSize(20, 20)
-    outer:SetPoint("CENTER")
-    outer:SetRotation(math.rad(45))
-    local inner = tail:CreateTexture(nil, "ARTWORK")
-    inner:SetTexture("Interface\\Buttons\\WHITE8X8")
-    inner:SetVertexColor(0.05, 0.05, 0.05)
-    inner:SetSize(15, 15)
-    inner:SetPoint("CENTER", 0, 1)
-    inner:SetRotation(math.rad(45))
-
-    f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    f.title:SetPoint("TOPLEFT", 16, -14)
-    f.sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    f.sub:SetPoint("TOPLEFT", f.title, "BOTTOMLEFT", 0, -6)
-    f.sub:SetText("Click here to open your talents.")
-
-    local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-    close:SetSize(26, 26)
-    close:SetPoint("TOPRIGHT", -2, -2)
-    close:SetScript("OnClick", function()
-        UI.talentDismissedAt = GetTime()  -- comes back after 15 minutes
-        UI.TalentBubble(0)
-    end)
-
-    f:RegisterForClicks("LeftButtonUp")
-    f:SetScript("OnClick", function()
-        OpenTalents()
-    end)
-
-    -- glow over the talent button (our own frame; the game's button is untouched)
-    local glow = CreateFrame("Frame", nil, UIParent)
-    glow:SetFrameStrata("DIALOG")
-    glow:EnableMouse(false)
-    local tex = glow:CreateTexture(nil, "OVERLAY")
-    tex:SetTexture("Interface\\Buttons\\CheckButtonHilight")
-    tex:SetBlendMode("ADD")
-    tex:SetVertexColor(1, 0.82, 0)
-    tex:SetAllPoints()
-    local ag = glow:CreateAnimationGroup()
-    ag:SetLooping("BOUNCE")
-    local a = ag:CreateAnimation("Alpha")
-    a:SetFromAlpha(1)
-    a:SetToAlpha(0.3)
-    a:SetDuration(0.8)
-    glow.anim = ag
-    glow:Hide()
-    f.glow = glow
-
-    f:Hide()
-    UI.bubble = f
-    return f
-end
-
-function UI.TalentBubble(n)
-    if InCombatLockdown() then return end
-    local f = UI.bubble
-    local snoozed = UI.talentDismissedAt and (GetTime() - UI.talentDismissedAt) < 900
-    if not n or n <= 0 or snoozed then
-        if f then f:Hide(); f.glow.anim:Stop(); f.glow:Hide() end
-        return
-    end
-    f = f or CreateBubble()
-    f.title:SetText(format("%d talent point%s to spend", n, n == 1 and "" or "s"))
-    f:SetWidth(math.max(f.title:GetStringWidth(), f.sub:GetStringWidth()) + 70)
-    f:ClearAllPoints()
-    local b = TalentButton()
-    if b then
-        f:SetPoint("BOTTOM", b, "TOP", 0, 16)
-        f:SetClampedToScreen(true)
-        f.glow:ClearAllPoints()
-        f.glow:SetPoint("TOPLEFT", b, "TOPLEFT", -4, 4)
-        f.glow:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", 4, -4)
-        f.glow:Show()
-        f.glow.anim:Play()
-    else
-        f:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 160)
-        f.glow:Hide()
-    end
-    f:Show()
 end
 
 function UI.Init()

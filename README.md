@@ -16,7 +16,6 @@ Talk to your class trainer once. The addon reads every spell, rank, level and co
 - Trainer window: a "Learn all" box next to it, with a confirmation before it spends gold.
 - Professions (Vanilla rules): tells you when you can train Journeyman (skill 50), Expert (skill 125) or Artisan (skill 200); level requirements are read from the profession trainer, when you're capped and when you're close to the cap. Cooking, First Aid and Fishing note that higher ranks come from a book or a quest.
 - Any capital city (Stormwind, Ironforge, Darnassus, Orgrimmar, Thunder Bluff, Undercity), or within 40 yards of a trainer you need: a to-do list with a Waypoint button for each trainer.
-- Unspent talent points: reminder after level-up and in the panel.
 - New profession recipes: talk to a profession trainer once; it tells you when your skill is high enough for new recipes there.
 - Capped profession (e.g. 75/75): shows in the to-do list when you enter a capital or get close to the trainer. Optional: a warning on every craft or gather (off by default, in Options).
 - Recipes waiting: the panel lists every recipe you have the skill for but haven't bought, with prices; ones you can't afford are shown in red. "What can I learn?" window (spells + recipes) opens anywhere: button in the panel, Shift-click the minimap button, or /fmn recipes.

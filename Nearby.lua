@@ -210,10 +210,6 @@ function N.BuildTasks()
             }
         end
     end
-    local talents = ns.db.remindTalents and ns.UnspentTalents()
-    if talents and talents > 0 then
-        tasks[#tasks + 1] = { title = "Talents", detail = format("%d unspent point(s) – open your talents", talents) }
-    end
     return tasks
 end
 
